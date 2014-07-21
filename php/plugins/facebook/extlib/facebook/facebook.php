@@ -34,7 +34,7 @@ class Facebook extends BaseFacebook
    */
   public function __construct($config) {
     if (!session_id()) {
-        SessionCache::init();
+      session_start();
     }
     parent::__construct($config);
   }

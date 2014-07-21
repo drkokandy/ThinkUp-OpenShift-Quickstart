@@ -198,13 +198,7 @@ class DAOFactory {
     //Photo DAO
         'PhotoDAO' => array(
     //MySQL Version
-            'mysql' => 'PhotoMySQLDAO' ),
-        'SessionDAO' => array(
-    //MySQL Version
-            'mysql' => 'SessionMySQLDAO' ),
-        'CookieDAO' => array(
-    //MySQL Version
-            'mysql' => 'CookieMySQLDAO' )
+            'mysql' => 'PhotoMySQLDAO' )
 
     );
 

@@ -56,7 +56,8 @@ class FoursquareAPIAccessor{
         $date = getdate();
 
         // Add the year month and day at the end of the URL
-        $url = $url."&v=20120829";
+        $url = $url."&v=".$date['year'].$date['mon'].$date['mday'];
+
         // Get any results returned from this request
         $result = Utils::getURLContents($url);
 
