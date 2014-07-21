@@ -3,11 +3,11 @@
  *
  * ThinkUp/webapp/plugins/GooglePlus/controller/class.GooglePlusPluginConfigurationController.php
  *
- * Copyright (c) 2011-2012 Gina Trapani
+ * Copyright (c) 2011-2013 Gina Trapani
  *
  * LICENSE:
  *
- * This file is part of ThinkUp (http://thinkupapp.com).
+ * This file is part of ThinkUp (http://thinkup.com).
  *
  * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
@@ -23,7 +23,7 @@
  * GooglePlus Plugin Configuration Controller
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2011-2012 Gina Trapani
+ * @copyright 2011-2013 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  */
 
@@ -106,8 +106,8 @@ class GooglePlusPluginConfigurationController extends PluginConfigurationControl
         if (isset($_GET['code'])) {
             $code = $_GET['code'];
 
-            $crawler = new GooglePlusCrawler(null, null);
-            $tokens = $crawler->getOAuthTokens($client_id, $client_secret, $code, 'authorization_code',
+            $crawler_plugin_registrar = new GooglePlusCrawler(null, null);
+            $tokens = $crawler_plugin_registrar->getOAuthTokens($client_id, $client_secret, $code, 'authorization_code',
             $redirect_uri);
             if (isset($tokens->error)) {
                 $this->addErrorMessage("Oops! Something went wrong while obtaining OAuth tokens.<br>Google says \"".
@@ -189,9 +189,9 @@ class GooglePlusPluginConfigurationController extends PluginConfigurationControl
 
         if (!$user_dao->isUserInDB($gplus_user_id, 'google+')) {
             $r = array('user_id'=>$gplus_user_id, 'user_name'=>$gplus_username,'full_name'=>$gplus_username,
-            'avatar'=>'', 'location'=>'', 'description'=>'', 'url'=>'', 'is_protected'=>'',  'follower_count'=>0,
-            'friend_count'=>0, 'post_count'=>0, 'last_updated'=>'', 'last_post'=>'', 'joined'=>'',
-            'last_post_id'=>'', 'network'=>'facebook' );
+            'avatar'=>'', 'location'=>'', 'description'=>'', 'url'=>'', 'is_verified'=>'', 'is_protected'=>'',
+            'follower_count'=>0, 'friend_count'=>0, 'post_count'=>0, 'last_updated'=>'', 'last_post'=>'',
+            'joined'=>'0000-00-00 00:00:00', 'last_post_id'=>'', 'network'=>'google+' );
             $u = new User($r, 'Owner info');
             $user_dao->updateUser($u);
         }

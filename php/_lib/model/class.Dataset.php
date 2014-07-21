@@ -3,11 +3,11 @@
  *
  * ThinkUp/webapp/_lib/model/class.Dataset.php
  *
- * Copyright (c) 2009-2012 Gina Trapani
+ * Copyright (c) 2009-2013 Gina Trapani
  *
  * LICENSE:
  *
- * This file is part of ThinkUp (http://thinkupapp.com).
+ * This file is part of ThinkUp (http://thinkup.com).
  *
  * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
@@ -24,7 +24,7 @@
  * Dataset
  * Parameters needed to retrieve a set of data to display in ThinkUp.
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2012 Gina Trapani
+ * @copyright 2009-2013 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
  */
@@ -61,8 +61,8 @@ class Dataset {
      *
      * @var array String of allowed DAO names
      */
-    var $FETCHING_DAOS = array('FollowDAO', 'PostDAO', 'LinkDAO', 'FollowerCountDAO', 'FavoritePostDAO',
-    'PluginOptionDAO', 'GroupMembershipCountDAO');
+    var $FETCHING_DAOS = array('FollowDAO', 'PostDAO', 'LinkDAO', 'CountHistoryDAO', 'FavoritePostDAO',
+    'PluginOptionDAO', 'InsightDAO');
 
     /**
      *
@@ -130,7 +130,7 @@ class Dataset {
     public function retrieveIterator() {
         $dao = DAOFactory::getDAO($this->dao_name);
         $iterator = null;
-        if (! is_null($this->iterator_method_name) ) {
+        if (!is_null($this->iterator_method_name) ) {
             if (method_exists($dao, $this->iterator_method_name)) {
                 $iterator = call_user_func_array(array($dao, $this->iterator_method_name),
                 $this->iterator_method_params);

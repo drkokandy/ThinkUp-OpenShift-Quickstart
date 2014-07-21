@@ -3,11 +3,11 @@
  *
  * ThinkUp/webapp/_lib/controller/class.BackupController.php
  *
- * Copyright (c) 2009-2012 Mark Wilkie
+ * Copyright (c) 2009-2013 Mark Wilkie
  *
  * LICENSE:
  *
- * This file is part of ThinkUp (http://thinkupapp.com).
+ * This file is part of ThinkUp (http://thinkup.com).
  *
  * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
@@ -25,7 +25,7 @@
  * Exports posts from an instance user on ThinkUp.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2012 Mark Wilkie
+ * @copyright 2009-2013 Mark Wilkie
  * @author Mark Wilkie <mwilkie[at]gmail[dot]com>
  *
  */
@@ -47,7 +47,7 @@ class BackupController extends ThinkUpAdminController {
     public function adminControl() {
         $this->disableCaching();
         $this->view_mgr->addHelp('backup', 'install/backup');
-        if (! self::checkForZipSupport()) {
+        if (!self::checkForZipSupport()) {
             $this->addToView('no_zip_support', true);
         }
         // pass the count of the table with  the most records
@@ -84,14 +84,14 @@ class BackupController extends ThinkUpAdminController {
                 } catch (MySQLGrantException $e) {
                     $this->addErrorMessage('It looks like the MySQL user does not have the proper permissions to grant'
                     . ' export Access. Please see the'
-                    . ' <a href="http://thinkupapp.com/docs/troubleshoot/common/backupcannotwrite.html">'
+                    . ' <a href="http://thinkup.com/docs/troubleshoot/common/backupcannotwrite.html">'
                     . ' ThinkUp documentation</a> for more info on how to resolve this issue.');
                     self::mutexLock(true);
                     return $this->generateView();
                 } catch (OpenFileException $e) {
                     $this->addErrorMessage('It looks like the MySQL user does not have the proper file permissions to'
                     . ' export data. Please see the'
-                    . ' <a href="http://thinkupapp.com/docs/troubleshoot/common/backupcannotwrite.html">'
+                    . ' <a href="http://thinkup.com/docs/troubleshoot/common/backupcannotwrite.html">'
                     . ' ThinkUp documentation</a> for more info on how to resolve this issue.');
                     self::mutexLock(true);
                     return $this->generateView();
@@ -139,19 +139,19 @@ class BackupController extends ThinkUpAdminController {
     }
 
     /**
-     *
-     * @param boolean $release, if defined release mutex, else get it
+     * Set mutex lock
+     * @param bool $release, if defined release mutex, else get it
      * @throws CrawlerLockedException if unable to get crawler mutex
      */
     public static function mutexLock($release = false) {
         $mutex_dao = DAOFactory::getDAO('MutexDAO');
-        $global_mutex_name = Crawler::GLOBAL_MUTEX;
+        $global_mutex_name = PluginRegistrarCrawler::GLOBAL_MUTEX;
         if ($release) {
             $mutex_dao->releaseMutex($global_mutex_name);
         } else {
             // Everyone needs to check the global mutex
             $lock_successful = $mutex_dao->getMutex($global_mutex_name);
-            if (! $lock_successful) {
+            if (!$lock_successful) {
                 throw new CrawlerLockedException("A crawl is in progress, please wait until completed...");
             }
         }

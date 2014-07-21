@@ -3,11 +3,11 @@
  *
  * ThinkUp/webapp/_lib/controller/class.RegisterController.php
  *
- * Copyright (c) 2009-2012 Terrance Shepherd, Gina Trapani
+ * Copyright (c) 2009-2013 Terrance Shepherd, Gina Trapani
  *
  * LICENSE:
  *
- * This file is part of ThinkUp (http://thinkupapp.com).
+ * This file is part of ThinkUp (http://thinkup.com).
  *
  * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
@@ -25,7 +25,7 @@
  * Registers new ThinkUp users.
  * This controller is not used when the installer registers the first user. Class.InstallerController handles that
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2012 Terrance Shepherd, Gina Trapani
+ * @copyright 2009-2013 Terrance Shepherd, Gina Trapani
  * @author Terrance Shepherd
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
@@ -45,20 +45,17 @@ class RegisterController extends ThinkUpController {
     public function __construct($session_started=false) {
         parent::__construct($session_started);
         $this->setViewTemplate('session.register.tpl');
+        $this->addHeaderJavaScript('assets/js/jqBootstrapValidation.js');
+        $this->addHeaderJavaScript('assets/js/validate-fields.js');
         $this->setPageTitle('Register');
     }
 
     public function control(){
+        $this->redirectToThinkUpLLCEndpoint();
         if ($this->isLoggedIn()) {
-            $controller = new DashboardController(true);
+            $controller = new InsightStreamController(true);
             return $controller->go();
         } else {
-            // register form validation
-            $this->addHeaderCSS('assets/css/validate_password.css');
-            $this->addHeaderJavaScript('assets/js/jquery.validate.min.js');
-            $this->addHeaderJavaScript('assets/js/jquery.validate.password.js');
-            $this->addHeaderJavaScript('assets/js/validate_password.js');
-
             $config = Config::getInstance();
             $is_registration_open = $config->getValue('is_registration_open');
 
@@ -82,7 +79,8 @@ class RegisterController extends ThinkUpController {
                 $disable_xss = true;
                 $this->addErrorMessage('<p>Sorry, registration is closed on this installation of '.
                 $config->getValue('app_title_prefix')."ThinkUp.</p>".
-                '<p><a href="http://thinkupapp.com">Install ThinkUp on your own server.</a></p>', null, $disable_xss);
+                '<p><a href="http://thinkup.com" class="btn">Install ThinkUp on your own server.</a></p>', null,
+                $disable_xss);
             } else {
                 $owner_dao = DAOFactory::getDAO('OwnerDAO');
                 $this->addToView('closed', false);
@@ -125,10 +123,9 @@ class RegisterController extends ThinkUpController {
                                 $_POST['full_name']);
 
                                 if ($activation_code != false) {
-                                    $es = new SmartyThinkUp();
+                                    $es = new ViewManager();
                                     $es->caching=false;
-                                    $server = $_SERVER['HTTP_HOST'];
-                                    $es->assign('server', $server );
+                                    $es->assign('application_url', Utils::getApplicationURL(false) );
                                     $es->assign('email', urlencode($_POST['email']) );
                                     $es->assign('activ_code', $activation_code );
                                     $message = $es->fetch('_email.registration.tpl');

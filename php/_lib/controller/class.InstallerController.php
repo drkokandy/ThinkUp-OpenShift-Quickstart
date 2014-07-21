@@ -3,11 +3,11 @@
  *
  * ThinkUp/webapp/_lib/controller/class.InstallerController.php
  *
- * Copyright (c) 2009-2012 Dwi Widiastuti, Gina Trapani
+ * Copyright (c) 2009-2013 Dwi Widiastuti, Gina Trapani
  *
  * LICENSE:
  *
- * This file is part of ThinkUp (http://thinkupapp.com).
+ * This file is part of ThinkUp (http://thinkup.com).
  *
  * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
@@ -25,7 +25,7 @@
  * Web-based application installer.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2012 Dwi Widiastuti, Gina Trapani
+ * @copyright 2009-2013 Dwi Widiastuti, Gina Trapani
  * @author Dwi Widiastuti <admin[at]diazuwi[dot]web[dot]id>
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  */
@@ -55,7 +55,7 @@ class InstallerController extends ThinkUpController {
             'debug'=>false,
             'app_title_prefix'=>'',
             'cache_pages'=>false);
-        $this->view_mgr = new SmartyThinkUp($cfg_array);
+        $this->view_mgr = new ViewManager($cfg_array);
         $this->setPageTitle('Install ThinkUp');
         $this->disableCaching();
         $this->reqs = $reqs;
@@ -154,10 +154,15 @@ class InstallerController extends ThinkUpController {
             }
         }
         $this->addToView('permissions_compat', $permissions_compat);
-        $this->addToView('writeable_data_directory', FileDataManager::getDataPath());
+        $this->addToView('writable_data_directory', FileDataManager::getDataPath());
+
+        // session save path permissions check
+        $session_permissions_compat = $this->installer->isSessionDirectoryWritable();
+        $this->addToView('session_permissions_compat', $session_permissions_compat);
+        $this->addToView('writable_session_save_directory', ini_get('session.save_path'));
 
         // other vars set to view
-        $requirements_met = ($php_compat && $libs_compat && $permissions_compat);
+        $requirements_met = ($php_compat && $libs_compat && $permissions_compat && $session_permissions_compat);
         $this->addToView('requirements_met', $requirements_met);
         $this->addToView('subtitle', 'Check System Requirements');
 
@@ -174,6 +179,9 @@ class InstallerController extends ThinkUpController {
      */
     private function step2() {
         $this->setViewTemplate('install.step2.tpl');
+        $this->addHeaderJavaScript('assets/js/jstz-1.0.4.min.js');
+        $this->addHeaderJavaScript('assets/js/jqBootstrapValidation.js');
+        $this->addHeaderJavaScript('assets/js/validate-fields.js');
 
         // make sure we have passed step 1
         if ( !$this->installer->checkStep1() ) {
@@ -190,9 +198,9 @@ class InstallerController extends ThinkUpController {
         $this->addToView('db_prefix', 'tu_');
         $this->addToView('db_socket', '');
         $this->addToView('db_port', '');
-        $this->addToView('tz_list', $this->getTimeZoneList());
+        $this->addToView('tz_list', Installer::getTimeZoneList());
         $this->addToView('current_tz', $current_tz);
-        $this->addToView('site_email', 'you@example.com');
+        $this->addToView('site_email', '');
     }
 
     /**
@@ -315,7 +323,7 @@ class InstallerController extends ThinkUpController {
             $this->addToView('db_port', $db_config['db_port']);
             $this->addToView('db_type', $db_config['db_type']);
             $this->addToView('current_tz', $_POST['timezone']);
-            $this->addToView('tz_list', $this->getTimeZoneList());
+            $this->addToView('tz_list', Installer::getTimeZoneList());
             $this->addToView('site_email', $email);
             $this->addToView('full_name', $full_name);
             return;
@@ -338,14 +346,14 @@ class InstallerController extends ThinkUpController {
                 "following commands:<br /><code>sudo touch " . escapeshellcmd(THINKUP_WEBAPP_PATH . "config.inc.php") .
                 "</code><br /><code>sudo chown $whoami " . escapeshellcmd(THINKUP_WEBAPP_PATH .
                 "config.inc.php") ."</code><br /><br />If you don't have root access, create the <code>" .
-                THINKUP_WEBAPP_PATH . "config.inc.php</code> file manually, and paste the following text into it.".
-                "<br /><br />Click the <strong>Next Step</strong> button below once you have done either.",
+                THINKUP_WEBAPP_PATH . "config.inc.php</code> file, show the contents of your config file below," .
+                " and copy and paste the text into the <code>config.inc.php</code> file.",
                 null, $disable_xss);
             } else {
                 $this->addErrorMessage("ThinkUp couldn't write the <code>config.inc.php</code> file.<br /><br />".
                 "You will need to create the <code>" .
-                THINKUP_WEBAPP_PATH . "config.inc.php</code> file manually, and paste the following text into it.".
-                "<br /><br />Click the <strong>Next Step</strong> button once this is done.", null, $disable_xss);
+                THINKUP_WEBAPP_PATH . "config.inc.php</code> file manually, and paste the following text into it.",
+                null, $disable_xss);
             }
             $this->addToView('config_file_contents', $config_file_contents_str );
             $this->addToView('_POST', $_POST);
@@ -361,6 +369,9 @@ class InstallerController extends ThinkUpController {
         // if empty, we're ready to populate the database with ThinkUp tables
         $this->installer->populateTables($db_config);
 
+        //Set the application server name in app settings for access by command-line scripts
+        Installer::storeServerName();
+
         $owner_dao = DAOFactory::getDAO('OwnerDAO', $db_config);
         if ( !$owner_dao->doesAdminExist() && !$owner_dao->doesOwnerExist($email)) { // create admin if not exists
             $activation_code = $owner_dao->createAdmin($email, $password, $full_name);
@@ -371,9 +382,9 @@ class InstallerController extends ThinkUpController {
             'debug'=>false,
             'app_title_prefix'=>"",
             'cache_pages'=>false);
-            $email_view = new SmartyThinkUp($cfg_array);
+            $email_view = new ViewManager($cfg_array);
             $email_view->caching=false;
-            $email_view->assign('server', $_SERVER['HTTP_HOST'] );
+            $email_view->assign('application_url', Utils::getApplicationURL() );
             $email_view->assign('email', urlencode($email) );
             $email_view->assign('activ_code', $activation_code );
             $message = $email_view->fetch('_email.registration.tpl');
@@ -411,7 +422,7 @@ class InstallerController extends ThinkUpController {
 
         // check $THINKUP_CFG['repair'] is set to true
         // bypass this security check when running tests
-        if ( defined('TESTS_RUNNING') && TESTS_RUNNING ) {
+        if ( Utils::isTest() ) {
             $THINKUP_CFG['repair'] = true;
         }
         $this->installer->repairerIsDefined($THINKUP_CFG);
@@ -465,41 +476,5 @@ class InstallerController extends ThinkUpController {
                 $this->addToView('action_form', $_SERVER['REQUEST_URI']);
             }
         }
-    }
-
-    /**
-     * Returns an array of time zone options formatted for display in a select field.
-     *
-     * @return array An associative array of options, ready for optgrouping.
-     */
-    protected function getTimeZoneList() {
-        $tz_options = timezone_identifiers_list();
-        $view_tzs = array();
-
-        foreach ($tz_options as $option) {
-            $option_data = explode('/', $option);
-
-            // don't allow user to select UTC
-            if ($option_data[0] == 'UTC') {
-                continue;
-            }
-
-            // handle things like the many Indianas
-            if (isset($option_data[2])) {
-                $option_data[1] = $option_data[1] . ': ' . $option_data[2];
-            }
-
-            //avoid undefined offset error
-            if (!isset($option_data[1])) {
-                $option_data[1] = $option_data[0];
-            }
-
-            $view_tzs[$option_data[0]][] = array(
-                'val' => $option,
-                'display' => str_replace('_', ' ', $option_data[1])
-            );
-        }
-
-        return $view_tzs;
     }
 }

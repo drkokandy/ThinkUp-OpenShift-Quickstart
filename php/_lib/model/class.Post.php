@@ -3,11 +3,11 @@
  *
  * ThinkUp/webapp/_lib/model/class.Post.php
  *
- * Copyright (c) 2009-2012 Gina Trapani
+ * Copyright (c) 2009-2013 Gina Trapani
  *
  * LICENSE:
  *
- * This file is part of ThinkUp (http://thinkupapp.com).
+ * This file is part of ThinkUp (http://thinkup.com).
  *
  * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
@@ -24,7 +24,7 @@
  * Post
  * A post, tweet, or status update on a ThinkUp source network or service (like Twitter or Facebook)
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2012 Gina Trapani
+ * @copyright 2009-2013 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  */
 class Post {
@@ -177,15 +177,20 @@ class Post {
      */
     var $rt_threshold;
     /**
+     * @var Str Link to this post on the respective service.
+     */
+    var $permalink;
+    /**
      * Constructor
      * @param array $val Array of key/value pairs
      * @return Post
      */
     public function __construct($val) {
-        $this->id = $val["id"];
         // a fix for getPost() where the join of the links table column links.id overides the posts.id
-        if (!isset($this->id) && isset($val["post_key"])) {
+        if (isset($val["post_key"])) {
             $this->id = $val["post_key"];
+        } else {
+            $this->id = $val["id"];
         }
         $this->post_id = $val["post_id"];
         $this->author_user_id = $val["author_user_id"];
@@ -238,6 +243,7 @@ class Post {
 
         // non-persistent, used for UI information display
         $this->all_retweets = $val['old_retweet_count_cache'] + $largest_native_RT_count;
+        $this->permalink = $val['permalink'];
     }
 
     /**
@@ -294,7 +300,6 @@ class Post {
      */
     public static function extractHashtags($post_text) {
         preg_match_all('/(^|[^a-z0-9_])#([a-z0-9_]+)/i', $post_text, $matches);
-
         // sometimes there's leading or trailing whitespace on the match, trim it
         foreach ($matches[0] as $key=>$match) {
             $matches[0][$key] = trim($match, ' ');

@@ -3,11 +3,11 @@
  *
  * ThinkUp/webapp/_lib/controller/class.GridController.php
  *
- * Copyright (c) 2009-2012 Mark Wilkie, Guillaume Boudreau
+ * Copyright (c) 2009-2013 Mark Wilkie, Guillaume Boudreau
  *
  * LICENSE:
  *
- * This file is part of ThinkUp (http://thinkupapp.com).
+ * This file is part of ThinkUp (http://thinkup.com).
  *
  * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
@@ -26,7 +26,7 @@
  * Returns Unbuffered JS XSS callback/JSON list of posts for javascript grid search view
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2012 Mark Wilkie, Guillaume Boudreau
+ * @copyright 2009-2013 Mark Wilkie, Guillaume Boudreau
  * @author Mark Wilkie <mwilkie[at]gmail[dot]com>
  *
  */
@@ -91,7 +91,7 @@ class GridController extends ThinkUpAuthController {
                 $username = $_GET['u'];
                 $ownerinstance_dao = DAOFactory::getDAO('OwnerInstanceDAO');
                 $owner_dao = DAOFactory::getDAO('OwnerDAO');
-                if (! $owner) {
+                if (!$owner) {
                     $owner = $owner_dao->getByEmail($this->getLoggedInUser());
                 }
                 $instance = $instance_dao->getByUsername($username, $_GET['n']);
@@ -105,16 +105,16 @@ class GridController extends ThinkUpAuthController {
                         $post_dao = DAOFactory::getDAO('PostDAO');
                         $posts_it = $post_dao->getRepliesToPostIterator($_GET['t'],$_GET['n'], 'default','km',
                         $public_search);
-                        if (! $public_search) {
+                        if (!$public_search) {
                             $private_reply_search = true;
                         }
                     } else {
                         if (isset($_GET['nolimit']) && $_GET['nolimit'] == 'true') {
                             self::$MAX_ROWS = 0;
                         }
-                        $webapp = Webapp::getInstance();
-                        $webapp->setActivePlugin($instance->network);
-                        $tab = $webapp->getDashboardMenuItem($_GET['d'], $instance);
+                        $webapp_plugin_registrar = PluginRegistrarWebapp::getInstance();
+                        $webapp_plugin_registrar->setActivePlugin($instance->network);
+                        $tab = $webapp_plugin_registrar->getDashboardMenuItem($_GET['d'], $instance);
                         $posts_it = $tab->datasets[0]->retrieveIterator();
                     }
                     echo '{"status":"success","limit":' . self::$MAX_ROWS . ',"posts": [' . "\n";
@@ -125,7 +125,7 @@ class GridController extends ThinkUpAuthController {
                     }
                     foreach($posts_it as $key => $value) {
                         if ($private_reply_search) {
-                            if (! $ownerinstance_dao->doesOwnerHaveAccessToPost($owner, $value)) {
+                            if (!$ownerinstance_dao->doesOwnerHaveAccessToPost($owner, $value)) {
                                 continue;
                             }
                         }

@@ -3,11 +3,11 @@
  *
  * ThinkUp/webapp/plugins/twitter/controller/class.TwitterPluginConfigurationController.php
  *
- * Copyright (c) 2009-2012 Gina Trapani, Mark Wilkie
+ * Copyright (c) 2009-2013 Gina Trapani, Mark Wilkie
  *
  * LICENSE:
  *
- * This file is part of ThinkUp (http://thinkupapp.com).
+ * This file is part of ThinkUp (http://thinkup.com).
  *
  * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
@@ -26,25 +26,19 @@
  * Handles plugin configuration requests.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2012 Gina Trapani, Mark Wilkie
+ * @copyright 2009-2013 Gina Trapani, Mark Wilkie
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
  */
 class TwitterPluginConfigurationController extends PluginConfigurationController {
-    /**
-     *
-     * @var Owner
-     */
-    var $owner;
 
     public function authControl() {
         $config = Config::getInstance();
         Loader::definePathConstants();
         $this->setViewTemplate(THINKUP_WEBAPP_PATH.'plugins/twitter/view/twitter.account.index.tpl');
-        $this->view_mgr->addHelp('twitter', 'userguide/settings/plugins/twitter');
+        $this->view_mgr->addHelp('twitter', 'userguide/settings/plugins/twitter/index');
 
-        $id = DAOFactory::getDAO('InstanceDAO');
-        $od = DAOFactory::getDAO('OwnerDAO');
+        $instance_dao = DAOFactory::getDAO('InstanceDAO');
 
         // get plugin option values if defined...
         $plugin_options = $this->getPluginOptions();
@@ -52,82 +46,50 @@ class TwitterPluginConfigurationController extends PluginConfigurationController
         $oauth_consumer_secret = $this->getPluginOption('oauth_consumer_secret');
         $archive_limit = $this->getPluginOption('archive_limit');
         $num_twitter_errors = $this->getPluginOption('num_twitter_errors');
-        $max_api_calls_per_crawl = $this->getPluginOption('max_api_calls_per_crawl');
-        //Add public user instance
-        if (isset($_GET['twitter_username'])) { // if form was submitted
-            $logger = Logger::getInstance();
-
-            $api = new TwitterAPIAccessorOAuth('NOAUTH', 'NOAUTH', $oauth_consumer_key, $oauth_consumer_secret,
-            $num_twitter_errors, $max_api_calls_per_crawl);
-            $api_call = str_replace("[id]", $_GET['twitter_username'], $api->cURL_source['show_user']);
-            list($cURL_status, $data) = $api->apiRequestFromWebapp($api_call);
-            if ($cURL_status == 200) {
-                $thisFeed = array();
-                try {
-                    $xml = $api->createParserFromString(utf8_encode($data));
-                    $user = array('user_id'=>$xml->id, 'user_name'=>$xml->screen_name, 'is_protected'=>$xml->protected);
-                } catch(Exception $e) {
-                    $this->addErrorMessage($e->getMessage());
-                }
-                if (isset($user) && $user["is_protected"] == 'false') {
-                    // if so, add to instances table and owners table
-
-                    $i = $id->getByUsernameOnNetwork($_GET['twitter_username'], 'twitter');
-                    $oid = DAOFactory::getDAO('OwnerInstanceDAO');;
-
-                    $msg = '';
-                    if (isset($i)) { //Instance exists
-                        $oi = $oid->get($this->owner->id, $i->id);
-                        if ($oi == null) { //Owner_instance doesn't exist
-                            $oid->insert($this->owner->id, $i->id, '', '');
-                        }
-                    } else { //Instance does not exist
-                        $id->insert($user["user_id"], $user["user_name"]);
-
-                        $i = $id->getByUsernameOnNetwork($user["user_name"], 'twitter');
-                        $oid->insert($this->owner->id, $i->id, '', '');
-                    }
-                    $this->addSuccessMessage($_GET['twitter_username']." has been added to ThinkUp.");
-
-                    $this->addSuccessMessage("Added ".$_GET['twitter_username']." to ThinkUp.");
-                } else { // if not, return error
-                    $this->addErrorMessage($_GET['twitter_username'].
-                    " is a private Twitter account; ThinkUp cannot track it without authorization.");
-                }
-            } else {
-                $this->addErrorMessage($_GET['twitter_username']." is not a valid Twitter username.");
-            }
-        }
 
         $this->addToView('twitter_app_name', "ThinkUp ". $_SERVER['SERVER_NAME']);
         $this->addToView('thinkup_site_url', Utils::getApplicationURL(true));
 
         $plugin = new TwitterPlugin();
         if ($plugin->isConfigured()) {
-            $to = new TwitterOAuth($oauth_consumer_key, $oauth_consumer_secret);
-            /* Request tokens from twitter */
-            $tok = $to->getRequestToken();
+            $this->addToView('is_configured', true);
+            $owner_instances = $instance_dao->getByOwnerAndNetwork($this->owner, 'twitter');
+            $this->addToView('owner_instances', $owner_instances);
+            if (isset($this->owner) && $this->owner->isMemberAtAnyLevel()) {
+                if ($this->owner->isMemberLevel()) {
+                    if (sizeof($owner_instances) > 0) {
+                        $this->do_show_add_button = false;
+                        $this->addInfoMessage("To connect another Twitter account to ThinkUp, upgrade your membership.",
+                        'membership_cap');
+                    }
+                }
+            }
+            if (isset($_GET['oauth_token']) || $this->do_show_add_button ) {
+                $twitter_oauth = new TwitterOAuth($oauth_consumer_key, $oauth_consumer_secret);
+                /* Request tokens from twitter */
+                $token_array = $twitter_oauth->getRequestToken(Utils::getApplicationURL(true)."account/?p=twitter");
 
-            if (isset($tok['oauth_token'])
-            || (isset($_SESSION["MODE"]) && $_SESSION["MODE"] == "TESTS") || getenv("MODE")=="TESTS") { //testing
-                $token = $tok['oauth_token'];
-                SessionCache::put('oauth_request_token_secret', $tok['oauth_token_secret']);
+                if (isset($token_array['oauth_token']) || Utils::isTest()) {
+                    $token = $token_array['oauth_token'];
+                    SessionCache::put('oauth_request_token_secret', $token_array['oauth_token_secret']);
 
-                /* Build the authorization URL */
-                $oauthorize_link = $to->getAuthorizeURL($token);
+                    if (isset($_GET['oauth_token'])) {
+                        self::addAuthorizedUser($oauth_consumer_key, $oauth_consumer_secret, $num_twitter_errors);
+                    }
 
-                $owner_instances = $id->getByOwnerAndNetwork($this->owner, 'twitter');
-
-                $this->addToView('owner_instances', $owner_instances);
-                $this->addToView('oauthorize_link', $oauthorize_link);
-                $this->addToView('is_configured', true);
-            } else {
-                //set error message here
-                $this->addErrorMessage(
-                "Unable to obtain OAuth tokens from Twitter. Please double-check the consumer key and secret ".
-                "are correct.", "setup");
-                $oauthorize_link = '';
-                $this->addToView('is_configured', false);
+                    if ($this->do_show_add_button) {
+                        /* Build the authorization URL */
+                        $oauthorize_link = $twitter_oauth->getAuthorizeURL($token);
+                        $this->addToView('oauthorize_link', $oauthorize_link);
+                    }
+                } else {
+                    //set error message here
+                    $this->addErrorMessage(
+                    "Unable to obtain OAuth tokens from Twitter. Please double-check the consumer key and secret ".
+                    "are correct.", "setup");
+                    $oauthorize_link = '';
+                    $this->addToView('is_configured', false);
+                }
             }
         } else {
             $this->addInfoMessage('Please complete plugin setup to start using it.', 'setup');
@@ -161,29 +123,79 @@ class TwitterPluginConfigurationController extends PluginConfigurationController
         'default_value' => '5', 'advanced'=>true, 'size'=>3);
         $this->addPluginOption(self::FORM_TEXT_ELEMENT, $num_twitter_errors);
 
-        $favs_older_pages_label = 'Number of Pages to Check for Older Favorites';
-        $favs_older_pages = array('name' => 'favs_older_pages', 'label' => $favs_older_pages_label,
-        'default_value' => '2', 'advanced'=>true, 'size'=>2);
-        $this->addPluginOption(self::FORM_TEXT_ELEMENT, $favs_older_pages);
-
-        $favs_cleanup_pages_label = 'Number of Pages to Search each Crawl for Missed Favorites';
-        $favs_cleanup_pages = array('name' => 'favs_cleanup_pages', 'label' => $favs_cleanup_pages_label,
-        'default_value' => '1', 'advanced'=>true, 'size'=>2);
-        $this->addPluginOption(self::FORM_TEXT_ELEMENT, $favs_cleanup_pages);
-
-        $max_api_calls_per_crawl_label = 'Max API Calls Per Crawl';
-        $max_api_calls_per_crawl = array('name' => 'max_api_calls_per_crawl', 'label' => $max_api_calls_per_crawl_label,
-        'default_value' => '350', 'advanced'=> true, 'size'=>3);
-        $this->addPluginOption(self::FORM_TEXT_ELEMENT, $max_api_calls_per_crawl);
-
-        $api_calls_to_leave_unmade_per_minute_label = 'API Calls to Leave Unmade Per Minute Remaining in the Hour';
-        $api_calls_to_leave_unmade_per_minute = array('name' => 'api_calls_to_leave_unmade_per_minute', 'label' =>
-        $api_calls_to_leave_unmade_per_minute_label, 'default_value' => '2.0', 'advanced'=> true, 'size'=>2);
-        $this->addPluginOption(self::FORM_TEXT_ELEMENT, $api_calls_to_leave_unmade_per_minute);
-
         $tweet_count_per_call_label = 'Tweet Count to Return Per API Call';
         $tweet_count_per_call = array('name' => 'tweet_count_per_call', 'label' => $tweet_count_per_call_label,
         'default_value' => '100', 'advanced'=> true, 'size'=>3);
         $this->addPluginOption(self::FORM_TEXT_ELEMENT, $tweet_count_per_call);
+    }
+
+    /**
+     * Add user who just returned from Twitter.com OAuth authorization and populate view with error/success messages.
+     * @param str $oauth_consumer_key
+     * @param str $oauth_consumer_secret
+     * @param str $num_twitter_errors
+     * @return void
+     */
+    private function addAuthorizedUser($oauth_consumer_key, $oauth_consumer_secret, $num_twitter_errors) {
+        $request_token = $_GET['oauth_token'];
+        $request_token_secret = SessionCache::get('oauth_request_token_secret');
+
+        $twitter_oauth = new TwitterOAuth($oauth_consumer_key, $oauth_consumer_secret, $request_token,
+        $request_token_secret);
+        if (isset($_GET['oauth_verifier'])) {
+            $token_array = $twitter_oauth->getAccessToken($_GET['oauth_verifier']);
+        } else {
+            $token_array = null;
+        }
+
+        if (isset($token_array['oauth_token']) && isset($token_array['oauth_token_secret'])) {
+            $api = new TwitterAPIAccessorOAuth($token_array['oauth_token'], $token_array['oauth_token_secret'],
+                $oauth_consumer_key, $oauth_consumer_secret, $num_twitter_errors, false);
+
+            $authed_twitter_user = $api->verifyCredentials();
+            //                echo "User ID: ". $authed_twitter_user['user_id']."<br>";
+            //                echo "User name: ". $authed_twitter_user['user_name']."<br>";
+
+            if ( isset($authed_twitter_user) && isset($authed_twitter_user['user_name'])
+            && isset($authed_twitter_user['user_id'])) {
+                $instance_dao = DAOFactory::getDAO('TwitterInstanceDAO');
+                $instance = $instance_dao->getByUsername($authed_twitter_user['user_name'], 'twitter');
+                $owner_instance_dao = DAOFactory::getDAO('OwnerInstanceDAO');
+                if (isset($instance)) {
+                    $owner_instance = $owner_instance_dao->get($this->owner->id, $instance->id);
+                    if ($owner_instance != null) {
+                        $owner_instance_dao->updateTokens($this->owner->id, $instance->id, 
+                        $token_array['oauth_token'], $token_array['oauth_token_secret']);
+                        $this->addSuccessMessage($authed_twitter_user['user_name'].
+                        " on Twitter is already set up in ThinkUp! To add a different Twitter account, ".
+                        "log out of Twitter.com in your browser and authorize ThinkUp again.", 'user_add');
+                    } else {
+                        print_r($this->owner);
+                        if ($owner_instance_dao->insert($this->owner->id, $instance->id,
+                        $token_array['oauth_token'], $token_array['oauth_token_secret'])) {
+                            $this->addSuccessMessage("Success! ".$authed_twitter_user['user_name'].
+                            " on Twitter has been added to ThinkUp!", "user_add");
+                        } else {
+                            $this->addErrorMessage("Error: Could not create an owner instance.", "user_add");
+                        }
+                    }
+                } else {
+                    $instance_dao->insert($authed_twitter_user['user_id'], $authed_twitter_user['user_name']);
+                    $instance = $instance_dao->getByUsername($authed_twitter_user['user_name']);
+                    if ($owner_instance_dao->insert( $this->owner->id, $instance->id, $token_array['oauth_token'],
+                    $token_array['oauth_token_secret'])) {
+                        $this->addSuccessMessage("Success! ".$authed_twitter_user['user_name'].
+                        " on Twitter has been added to ThinkUp!", "user_add");
+                    } else {
+                        $this->addErrorMessage("Error: Could not create an owner instance.", "user_add");
+                    }
+                }
+            }
+        } else {
+            $msg = "Error: Twitter authorization did not complete successfully. Check if your account already ".
+            " exists. If not, please try again.";
+            $this->addErrorMessage($msg, "user_add");
+        }
+        $this->view_mgr->clear_all_cache();
     }
 }

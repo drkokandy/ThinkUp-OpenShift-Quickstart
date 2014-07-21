@@ -3,11 +3,11 @@
  *
  * ThinkUp/webapp/_lib/controller/class.GridExportController.php
  *
- * Copyright (c) 2009-2012 Mark Wilkie
+ * Copyright (c) 2009-2013 Mark Wilkie
  *
  * LICENSE:
  *
- * This file is part of ThinkUp (http://thinkupapp.com).
+ * This file is part of ThinkUp (http://thinkup.com).
  *
  * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
@@ -25,7 +25,7 @@
  * Exports Grid posts from an instance user on ThinkUp.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2012 Mark Wilkie
+ * @copyright 2009-2013 Mark Wilkie
  * @author Mark Wilkie <mwilkie[at]gmail[dot]com>
  *
  */
@@ -52,7 +52,7 @@ class GridExportController extends ThinkUpAuthController {
                 $_POST['grid_export_data'] = stripslashes($_POST['grid_export_data']);
             }
             $data = json_decode( $_POST['grid_export_data'] );
-            if (! $data ) {
+            if (!$data ) {
                 echo('No search data to export.' . json_last_error() . "<br />");
                 echo( $_POST['grid_export_data']);
             } else {

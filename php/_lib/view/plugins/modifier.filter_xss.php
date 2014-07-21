@@ -3,11 +3,11 @@
  *
  * ThinkUp/webapp/_lib/view/plugins/modifier.filter_xss.php
  *
- * Copyright (c) 2011-2012 Mark Wilkie
+ * Copyright (c) 2011-2013 Mark Wilkie
  *
  * LICENSE:
  *
- * This file is part of ThinkUp (http://thinkupapp.com).
+ * This file is part of ThinkUp (http://thinkup.com).
  *
  * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
@@ -36,7 +36,7 @@
  * Input:    text
  * Example:  {$some_text|filter_xss}
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2011-2012 Mark Wilkie
+ * @copyright 2011-2013 Mark Wilkie
  * @author   Mark Wilkie
  * @version 1.0
  * @param string

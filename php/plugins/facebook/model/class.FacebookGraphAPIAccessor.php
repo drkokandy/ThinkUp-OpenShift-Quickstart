@@ -5,7 +5,7 @@
  *
  * LICENSE:
  *
- * This file is part of ThinkUp (http://thinkupapp.com).
+ * This file is part of ThinkUp (http://thinkup.com).
  *
  * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
@@ -23,11 +23,11 @@
  *
  * Makes HTTP requests to the Facebook Graph API given a user access token.
  *
- * Copyright (c) 2009-2012 Gina Trapani
+ * Copyright (c) 2009-2013 Gina Trapani
  *
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2012 Gina Trapani
+ * @copyright 2009-2013 Gina Trapani
  */
 class FacebookGraphAPIAccessor {
     /**
@@ -39,7 +39,11 @@ class FacebookGraphAPIAccessor {
      */
     public static function apiRequest($path, $access_token, $fields=null) {
         $api_domain = 'https://graph.facebook.com';
-        $url = $api_domain.$path.'?access_token='.$access_token;
+        if (strpos($path, '?')===false) {
+            $url = $api_domain.$path.'?access_token='.$access_token;
+        } else {
+            $url = $api_domain.$path.'&access_token='.$access_token;
+        }
         if ($fields != null ) {
             $url = $url.'&fields='.$fields;
         }

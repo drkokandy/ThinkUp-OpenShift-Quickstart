@@ -3,11 +3,11 @@
  *
  * ThinkUp/webapp/_lib/controller/class.ThinkUpController.php
  *
- * Copyright (c) 2009-2012 Gina Trapani
+ * Copyright (c) 2009-2013 Gina Trapani
  *
  * LICENSE:
  *
- * This file is part of ThinkUp (http://thinkupapp.com).
+ * This file is part of ThinkUp (http://thinkup.com).
  *
  * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
@@ -26,13 +26,13 @@
  * The parent class of all ThinkUp webapp controllers.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2012 Gina Trapani
+ * @copyright 2009-2013 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  */
 
 abstract class ThinkUpController {
     /**
-     * @var SmartyThinkUp
+     * @var ViewManager
      */
     protected $view_mgr;
     /**
@@ -93,16 +93,25 @@ abstract class ThinkUpController {
      *  @return ThinkUpController
      */
     public function __construct($session_started=false) {
-        if (!$session_started) {
-            session_start();
-        }
         try {
             $config = Config::getInstance();
             $this->profiler_enabled = Profiler::isEnabled();
             if ( $this->profiler_enabled) {
                 $this->start_time = microtime(true);
             }
-            $this->view_mgr = new SmartyThinkUp();
+            if ($config->getValue('timezone')) {
+                date_default_timezone_set($config->getValue('timezone'));
+            }
+            if (!$session_started) {
+                SessionCache::init();
+            }
+            $this->view_mgr = new ViewManager();
+            if (SessionCache::isKeySet('selected_instance_network') &&
+            SessionCache::isKeySet('selected_instance_username')) {
+                $this->addToView('selected_instance_network', SessionCache::get('selected_instance_network'));
+                $this->addToView('selected_instance_username', SessionCache::get('selected_instance_username'));
+            }
+
             if ($this->isLoggedIn()) {
                 $this->addToView('logged_in_user', $this->getLoggedInUser());
             }
@@ -111,14 +120,6 @@ abstract class ThinkUpController {
             }
             $THINKUP_VERSION = $config->getValue('THINKUP_VERSION');
             $this->addToView('thinkup_version', $THINKUP_VERSION);
-
-            if (SessionCache::isKeySet('selected_instance_network') &&
-            SessionCache::isKeySet('selected_instance_username')) {
-                $this->addToView('selected_instance_network', SessionCache::get('selected_instance_network'));
-                $this->addToView('selected_instance_username', SessionCache::get('selected_instance_username'));
-                $this->addToView('logo_link', '?u='. urlencode(SessionCache::get('selected_instance_username'))
-                .'&n='. urlencode(SessionCache::get('selected_instance_network')));
-            }
         } catch (Exception $e) {
             Loader::definePathConstants();
             //echo 'sending this to Smarty:'.THINKUP_WEBAPP_PATH.'data/';
@@ -129,7 +130,7 @@ abstract class ThinkUpController {
             'debug'=>false,
             'app_title_prefix'=>"",
             'cache_pages'=>false);
-            $this->view_mgr = new SmartyThinkUp($cfg_array);
+            $this->view_mgr = new ViewManager($cfg_array);
         }
     }
 
@@ -490,28 +491,26 @@ abstract class ThinkUpController {
         if ($classname != "InstallerController") {
             //Initialize config
             $config = Config::getInstance();
-            if ($config->getValue('timezone')) {
-                date_default_timezone_set($config->getValue('timezone'));
-            }
             if ($config->getValue('debug')) {
                 ini_set("display_errors", 1);
                 ini_set("error_reporting", E_STRICT);
             }
             if ($classname != "BackupController") {
                 //Init plugins
-                $pdao = DAOFactory::getDAO('PluginDAO');
-                $active_plugins = $pdao->getActivePlugins();
+                $plugin_dao = DAOFactory::getDAO('PluginDAO');
+                $active_plugins = $plugin_dao->getActivePlugins();
                 Loader::definePathConstants();
-                foreach ($active_plugins as $ap) {
+                foreach ($active_plugins as $active_plugin) {
                     //add plugin's model and controller folders as Loader paths here
-                    Loader::addPath(THINKUP_WEBAPP_PATH.'plugins/'.$ap->folder_name."/model/");
-                    Loader::addPath(THINKUP_WEBAPP_PATH.'plugins/'.$ap->folder_name.
+                    Loader::addPath(THINKUP_WEBAPP_PATH.'plugins/'.$active_plugin->folder_name."/model/");
+                    Loader::addPath(THINKUP_WEBAPP_PATH.'plugins/'.$active_plugin->folder_name.
                     "/controller/");
                     //require the main plugin registration file here
                     if ( file_exists(
-                    THINKUP_WEBAPP_PATH.'plugins/'.$ap->folder_name."/controller/".$ap->folder_name.".php")) {
-                        require_once THINKUP_WEBAPP_PATH.'plugins/'.$ap->folder_name."/controller/".$ap->folder_name.
-                        ".php";
+                    THINKUP_WEBAPP_PATH.'plugins/'.$active_plugin->folder_name."/controller/".
+                    $active_plugin->folder_name.".php")) {
+                        require_once THINKUP_WEBAPP_PATH.'plugins/'.$active_plugin->folder_name."/controller/".
+                        $active_plugin->folder_name.".php";
                     }
                 }
             }
@@ -520,7 +519,7 @@ abstract class ThinkUpController {
 
     /**
      * Provided for tests only, to assert that proper view values have been set. (Debug must be equal to true.)
-     * @return SmartyThinkUp
+     * @return ViewManager
      */
     public function getViewManager() {
         return $this->view_mgr;
@@ -625,6 +624,22 @@ abstract class ThinkUpController {
             return true;
         } else {
             throw new InvalidCSRFTokenException($token);
+        }
+    }
+
+    /**
+     * Redirect this controller to a ThinkUp LLC-hosted URL.
+     * @param  str $page Optional filename at endpoint
+     * @return void
+     */
+    public function redirectToThinkUpLLCEndpoint($page=null) {
+        $config = Config::getInstance();
+        $thinkupllc_endpoint = $config->getValue('thinkupllc_endpoint');
+        if (isset($thinkupllc_endpoint)) {
+            $this->redirect($thinkupllc_endpoint.(isset($page)?$page:''));
+            return true;
+        } else {
+            return false;
         }
     }
 }

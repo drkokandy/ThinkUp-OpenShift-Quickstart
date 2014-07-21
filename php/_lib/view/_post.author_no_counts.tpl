@@ -15,13 +15,16 @@ $unit (optional) If $show_distance='true', unit should be 'mi' or 'km' for miles
     <div class="grid_2 alpha">
       <div class="avatar-container">
         {if $post->network == 'twitter'} <a href="https://twitter.com/intent/user?user_id={$post->author_user_id}" title="{$post->author_username} on Twitter">{/if}
-        <img src="{$post->author_avatar}" class="avatar2"/><img src="{$site_root_path}plugins/{$post->network|get_plugin_path}/assets/img/favicon.png" class="service-icon"/>
+        <img src="{$post->author_avatar}" class="avatar2" width="48" height="48"/><img src="{$site_root_path}plugins/{$post->network|get_plugin_path}/assets/img/favicon.png" class="service-icon"/>
         {if $post->network == 'twitter'}</a>{/if}
       </div>
     </div>
     <div class="grid_3 small">
       {if $post->network == 'twitter' && $username_link != 'internal'}
         <a href="https://twitter.com/intent/user?user_id={$post->author_user_id}" title="{$post->author_username} on Twitter">{$post->author_username}</a>
+      {elseif $post->network == 'foursquare'}
+        { *don't expose user email addresses or phone numbers*}
+        {$post->author_fullname}
       {else}
         {$post->author_username}
       {/if}

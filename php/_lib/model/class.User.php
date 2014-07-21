@@ -5,11 +5,11 @@
  *
  * ThinkUp/webapp/_lib/model/class.User.php
  *
- * Copyright (c) 2009-2012 Gina Trapani
+ * Copyright (c) 2009-2013 Gina Trapani
  *
  * LICENSE:
  *
- * This file is part of ThinkUp (http://thinkupapp.com).
+ * This file is part of ThinkUp (http://thinkup.com).
  *
  * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
@@ -29,7 +29,7 @@
  * It does not represent not ThinkUp users, see the Owner class for ThinkUp users.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2012 Gina Trapani
+ * @copyright 2009-2013 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
  */
@@ -69,6 +69,11 @@ class User {
      * @var url
      */
     var $url;
+    /**
+     *
+     * @var bool
+     */
+    var $is_verified;
     /**
      *
      * @var bool
@@ -154,6 +159,14 @@ class User {
             $this->location = $val['location'];
             $this->description = $val['description'];
             $this->url = $val['url'];
+            if (isset($val['is_verified'])) {
+                $this->is_verified = $val['is_verified'];
+            }
+            if ($this->is_verified == '') {
+                $this->is_verified = 0;
+            } elseif ($this->is_verified == 'true') {
+                $this->is_verified = 1;
+            }
             $this->is_protected = $val['is_protected'];
             if ($this->is_protected == '') {
                 $this->is_protected = 0;
@@ -177,7 +190,9 @@ class User {
             if (isset($val['last_post'])) {
                 $this->last_post = $val['last_post'];
             }
-            $this->joined = $val['joined'];
+            if (isset($val['joined'])) {
+                $this->joined = $val['joined'];
+            }
             $this->found_in = $found_in;
 
             if (isset($val['avg_tweets_per_day'])) {

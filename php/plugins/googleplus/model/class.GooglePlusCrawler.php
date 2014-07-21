@@ -3,11 +3,11 @@
  *
  * ThinkUp/webapp/plugins/googleplus/model/class.GooglePlusCrawler.php
  *
- * Copyright (c) 2011-2012 Gina Trapani
+ * Copyright (c) 2011-2013 Gina Trapani
  *
  * LICENSE:
  *
- * This file is part of ThinkUp (http://thinkupapp.com).
+ * This file is part of ThinkUp (http://thinkup.com).
  *
  * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
@@ -27,7 +27,7 @@
  *
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2011-2012 Gina Trapani
+ * @copyright 2011-2013 Gina Trapani
  */
 class GooglePlusCrawler {
     /**
@@ -75,7 +75,7 @@ class GooglePlusCrawler {
         $user_object = null;
         if ($force_reload_from_googleplus || !$user_dao->isUserInDB($user_id, $network)) {
             // Get owner user details and save them to DB
-            $fields = array('fields'=>'displayName,id,image,tagline');
+            $fields = array('fields'=>'displayName,id,image,tagline,verified');
             $user_details =  $this->api_accessor->apiRequest('people/'.$user_id, $this->access_token, $fields);
             $user_details->network = $network;
 
@@ -111,7 +111,7 @@ class GooglePlusCrawler {
         $user_dao = DAOFactory::getDAO('UserDAO');
         $user_object = null;
         // Get owner user details and save them to DB
-        $fields = array('fields'=>'displayName,id,image,tagline');
+        $fields = array('fields'=>'displayName,id,image,tagline,verified');
         $user_details =  $this->api_accessor->apiRequest('people/me', $this->access_token, $fields);
 
         if (isset($user_details->error->code) && $user_details->error->code == '401') {
@@ -207,7 +207,7 @@ class GooglePlusCrawler {
                     $post['post_text'] = $item->object->content;
                     $should_capture_post = true;
                 } elseif ($item->verb == "share") {
-                    $post['post_text'] = $item->annotation;
+                    $post['post_text'] = (isset($item->annotation))?$item->annotation:'';
                     $should_capture_post = true;
                 }
                 if ($should_capture_post) {
@@ -247,7 +247,15 @@ class GooglePlusCrawler {
                         ?$item->object->attachments[0]->displayName:'',
                     "post_key"=>$inserted_post_key
                         ));
-                        $added_links = $link_dao->insert($link);
+                        try {
+                            $added_links = $link_dao->insert($link);
+                        } catch (DuplicateLinkException $e) {
+                            $this->logger->logInfo($link->url." already exists in links table",
+                            __METHOD__.','.__LINE__);
+                        } catch (DataExceedsColumnWidthException $e) {
+                            $this->logger->logInfo($link->url."  data exceeds table column width",
+                            __METHOD__.','.__LINE__);
+                        }
                     }
                 }
                 $post = null;
@@ -280,6 +288,7 @@ class GooglePlusCrawler {
                 }
             }
             $user_vals["description"] = isset($details->tagline)?$details->tagline:'';
+            $user_vals["is_verifed"] = isset($details->verified)?$details->verified:'';
             $user_vals["is_protected"] = 0; //All Google+ users are public
             $user_vals["post_count"] = 0;
             $user_vals["joined"] = null;

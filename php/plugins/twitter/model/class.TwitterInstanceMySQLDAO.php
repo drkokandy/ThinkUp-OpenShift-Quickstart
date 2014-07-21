@@ -3,11 +3,11 @@
  *
  * ThinkUp/webapp/plugins/twitter/model/class.TwitterInstanceMySQLDAO.php
  *
- * Copyright (c) 2011-2012 Gina Trapani
+ * Copyright (c) 2011-2013 Gina Trapani
  *
  * LICENSE:
  *
- * This file is part of ThinkUp (http://thinkupapp.com).
+ * This file is part of ThinkUp (http://thinkup.com).
  *
  * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
@@ -22,7 +22,7 @@
  *
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2011-2012 Gina Trapani
+ * @copyright 2011-2013 Gina Trapani
  */
 class TwitterInstanceMySQLDAO extends InstanceMySQLDAO implements InstanceDAO {
 
@@ -35,8 +35,8 @@ class TwitterInstanceMySQLDAO extends InstanceMySQLDAO implements InstanceDAO {
     public function insert($network_user_id, $network_username, $network = "twitter", $viewer_id = false) {
         $id = parent::insert($network_user_id, $network_username, $network, $viewer_id);
         $q  = "INSERT INTO ".$this->getMetaTableName()." ";
-        $q .= "(id) ";
-        $q .= "VALUES (:instance_id) ";
+        $q .= "(id, last_reply_id) ";
+        $q .= "VALUES (:instance_id, '') ";
         $vars = array(
             ':instance_id'=>$id
         );
@@ -90,23 +90,17 @@ class TwitterInstanceMySQLDAO extends InstanceMySQLDAO implements InstanceDAO {
         if ($lfi){
             $q .= "last_favorite_id, ";
         }
-        $q .= "last_page_fetched_replies, last_page_fetched_tweets, last_unfav_page_checked, ";
-        $q .= "last_page_fetched_favorites)";
+        $q .= "last_reply_id) ";
         $q .= "VALUES (:instance_id, ";
         if ($lfi){
             $q .= ":last_favorite_id, ";
         }
-        $q .= ":last_page_fetched_replies, :last_page_fetched_tweets, :last_unfav_page_checked, ";
-        $q .= ":last_page_fetched_favorites)";
+        $q .= ":last_reply_id) ";
         $vars = array(
             ':instance_id'                  => $instance_object->id,
             ':last_favorite_id'             => $instance_object->last_favorite_id,
-            ':last_unfav_page_checked'      => $instance_object->last_unfav_page_checked,
-            ':last_page_fetched_favorites'  => $instance_object->last_page_fetched_favorites,
-            ':last_page_fetched_replies'    => isset($instance_object->last_page_fetched_replies)?
-        $instance_object->last_page_fetched_replies:1,
-            ':last_page_fetched_tweets'     => isset($instance_object->last_page_fetched_tweets)?
-        $instance_object->last_page_fetched_tweets:1,
+            ':last_reply_id'                => isset($instance_object->last_reply_id)?
+            $instance_object->last_reply_id:'',
         );
         if (!$lfi){
             unset ($vars[':last_favorite_id']);;
@@ -122,22 +116,17 @@ class TwitterInstanceMySQLDAO extends InstanceMySQLDAO implements InstanceDAO {
      */
     private function updateMetaData($instance_object) {
         $lfi = ($instance_object->last_favorite_id != "" ? true : false);
+        isset($instance_object->last_reply_id)?$instance_object->last_reply_id:1;
         $q  = "UPDATE ".$this->getMetaTableName()." SET ";
         if ($lfi){
             $q .= "last_favorite_id = :lastfavid, ";
         }
-        $q .= "last_page_fetched_replies = :lpfr, ";
-        $q .= "last_page_fetched_tweets = :lpft , ";
-        $q .= "last_unfav_page_checked = :lastunfav, ";
-        $q .= "last_page_fetched_favorites = :lpfv ";
+        $q .= "last_reply_id = :lpfr ";
         $q .= "WHERE id=:id;";
 
         $vars = array(
             ':lastfavid'     => $instance_object->last_favorite_id,
-            ':lastunfav'    => $instance_object->last_unfav_page_checked,
-            ':lpfv'         => $instance_object->last_page_fetched_favorites,
-            ':lpfr'         => $instance_object->last_page_fetched_replies,
-            ':lpft'         => $instance_object->last_page_fetched_tweets,
+            ':lpfr'         => $instance_object->last_reply_id,
             ':id'           => $instance_object->id
         );
         if (!$lfi){

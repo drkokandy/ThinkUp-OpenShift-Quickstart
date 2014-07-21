@@ -3,11 +3,11 @@
  *
  * ThinkUp/webapp/_lib/controller/class.UpgradeApplicationController.php
  *
- * Copyright (c) 2012 Mark Wilkie
+ * Copyright (c) 2012-2013 Mark Wilkie
  *
  * LICENSE:
  *
- * This file is part of ThinkUp (http://thinkupapp.com).
+ * This file is part of ThinkUp (http://thinkup.com).
  *
  * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
@@ -23,7 +23,7 @@
  * Web-based Application Update Controller
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2012 Mark Wilkie
+ * @copyright 2012-2013 Mark Wilkie
  * @author Mark Wilkie <mwilkie[at]gmail[dot]com>
  *
  */
@@ -51,6 +51,9 @@ class UpgradeApplicationController extends ThinkUpAuthController {
                 $this->addErrorMessage($e->getMessage(), null, true);
             }
         } else if (isset($_GET['ran_update'])) {
+            //Update the application server name in app settings for access by command-line scripts
+            Installer::storeServerName();
+
             //Clear Smarty's compiled templates and cache to start fresh with newly upgraded app
             $this->view_mgr->clear_compiled_tpl();
             $this->view_mgr->clear_all_cache();
@@ -92,7 +95,7 @@ class UpgradeApplicationController extends ThinkUpAuthController {
         $update_info = $update_client->getLatestVersionInfo();
         require(dirname(__FILE__) . '/../../install/version.php');
         $version = Config::GetInstance()->getvalue('THINKUP_VERSION');
-        if ( $update_info['version'] < $version) {
+        if ( version_compare($update_info['version'], $version) <= 0) {
             throw new Exception("You are running the latest version of ThinkUp.");
         }
 

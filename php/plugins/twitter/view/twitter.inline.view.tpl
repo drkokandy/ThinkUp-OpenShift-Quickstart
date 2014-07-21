@@ -115,6 +115,12 @@
   {/foreach}
 {/if}
 
+{if $years_most_popular}
+  {foreach from=$years_most_popular key=tid item=t name=foo}
+    {include file="_post.counts_no_author.tpl" post=$t}
+  {/foreach}
+{/if}
+
 {if ($display eq 'friends-mostactive' and not $people) or ($display eq 'friends-leastactive' and not $people) 
 or ($display eq 'friends-mostfollowed' and not $people) or ($display eq 'friends-former' and not $people)
 or ($display eq 'friends-notmutual' and not $people) 
@@ -151,10 +157,10 @@ or ($display eq 'followers-former' and not $people) or ($display eq 'followers-e
 
 <div class="view-all" id="older-posts-div">
   {if $next_page}
-    <a href="{$site_root_path}?{if $smarty.get.v}v={$smarty.get.v}&{/if}{if $smarty.get.u}u={$smarty.get.u}&{/if}{if $smarty.get.n}n={$smarty.get.n|urlencode}&{/if}page={$next_page}" id="next_page">&#60; Older</a>
+    <a href="{$site_root_path}dashboard.php?{if $smarty.get.v}v={$smarty.get.v}&{/if}{if $smarty.get.u}u={$smarty.get.u}&{/if}{if $smarty.get.n}n={$smarty.get.n|urlencode}&{/if}page={$next_page}" id="next_page">&#60; Older</a>
   {/if}
   {if $last_page}
-    | <a href="{$site_root_path}?{if $smarty.get.v}v={$smarty.get.v}&{/if}{if $smarty.get.u}u={$smarty.get.u}&{/if}{if $smarty.get.n}n={$smarty.get.n|urlencode}&{/if}page={$last_page}" id="last_page">Newer &#62;</a>
+    | <a href="{$site_root_path}dashboard.php?{if $smarty.get.v}v={$smarty.get.v}&{/if}{if $smarty.get.u}u={$smarty.get.u}&{/if}{if $smarty.get.n}n={$smarty.get.n|urlencode}&{/if}page={$last_page}" id="last_page">Newer &#62;</a>
   {/if}
 </div>
 

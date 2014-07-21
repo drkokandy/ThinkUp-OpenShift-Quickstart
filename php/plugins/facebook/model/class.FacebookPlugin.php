@@ -3,11 +3,11 @@
  *
  * ThinkUp/webapp/plugins/facebook/model/class.FacebookPlugin.php
  *
- * Copyright (c) 2009-2012 Gina Trapani, Mark Wilkie
+ * Copyright (c) 2009-2013 Gina Trapani, Mark Wilkie
  *
  * LICENSE:
  *
- * This file is part of ThinkUp (http://thinkupapp.com).
+ * This file is part of ThinkUp (http://thinkup.com).
  *
  * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
@@ -24,7 +24,7 @@
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @author Mark Wilkie <mark[at]bitterpill[dot]org>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2012 Gina Trapani, Mark Wilkie
+ * @copyright 2009-2013 Gina Trapani, Mark Wilkie
  */
 class FacebookPlugin extends Plugin implements CrawlerPlugin, DashboardPlugin, PostDetailPlugin {
 
@@ -68,15 +68,13 @@ class FacebookPlugin extends Plugin implements CrawlerPlugin, DashboardPlugin, P
         $current_owner = $owner_dao->getByEmail(Session::getLoggedInUser());
 
         //crawl Facebook user profiles and pages
-        $profiles = $instance_dao->getAllActiveInstancesStalestFirstByNetwork('facebook');
-        $pages = $instance_dao->getAllActiveInstancesStalestFirstByNetwork('facebook page');
+        $profiles = $instance_dao->getActiveInstancesStalestFirstForOwnerByNetworkNoAuthError($current_owner,
+        'facebook');
+        $pages = $instance_dao->getActiveInstancesStalestFirstForOwnerByNetworkNoAuthError($current_owner,
+        'facebook page');
         $instances = array_merge($profiles, $pages);
 
         foreach ($instances as $instance) {
-            if (!$owner_instance_dao->doesOwnerHaveAccessToInstance($current_owner, $instance)) {
-                // Owner doesn't have access to this instance; let's not crawl it.
-                continue;
-            }
             $logger->setUsername(ucwords($instance->network) . ' | '.$instance->network_username );
             $logger->logUserSuccess("Starting to collect data for ".$instance->network_username."'s ".
             ucwords($instance->network), __METHOD__.','.__LINE__);
@@ -85,22 +83,98 @@ class FacebookPlugin extends Plugin implements CrawlerPlugin, DashboardPlugin, P
             $access_token = $tokens['oauth_access_token'];
 
             $instance_dao->updateLastRun($instance->id);
-            $crawler = new FacebookCrawler($instance, $access_token, $max_crawl_time);
+            $facebook_crawler = new FacebookCrawler($instance, $access_token, $max_crawl_time);
+            $dashboard_module_cacher = new DashboardModuleCacher($instance);
             try {
-                $crawler->fetchPostsAndReplies();
+                $facebook_crawler->fetchPostsAndReplies();
+            } catch (APIOAuthException $e) {
+                $logger->logUserError(get_class($e).": ".$e->getMessage(), __METHOD__.','.__LINE__);
+                //Don't send reauth email if it's app-level API rate limting
+                //https://developers.facebook.com/docs/reference/ads-api/api-rate-limiting/#applimit
+                if ( strpos($e->getMessage(), 'Application request limit reached') === false
+                    //Don't send reauth email if Facebook is saying the app should try again later
+                    && strpos($e->getMessage(), 'Please retry your request later.') === false) {
+                    //The access token is invalid, save in owner_instances table
+                    $owner_instance_dao->setAuthErrorByTokens($instance->id, $access_token, '', $e->getMessage());
+                    //Send email alert
+                    //Get owner by auth tokens first, then send to that person
+                    $owner_email_to_notify = $owner_instance_dao->getOwnerEmailByInstanceTokens($instance->id,
+                    $access_token, '');
+                    $email_attempt = $this->sendInvalidOAuthEmailAlert($owner_email_to_notify,
+                    $instance->network_username);
+                    if ($email_attempt) {
+                        $logger->logUserInfo('Sent reauth email to '.$owner_email_to_notify, __METHOD__.','.__LINE__);
+                    } else {
+                        $logger->logInfo('Didn\'t send reauth email to '.$owner_email_to_notify,
+                        __METHOD__.','.__LINE__);
+                    }
+                } else {
+                    $logger->logInfo('Facebook API returned an error: '.$e->getMessage().
+                        ' Do nothing now and try again later', __METHOD__.','.__LINE__);
+                }
             } catch (Exception $e) {
-                $logger->logUserError('EXCEPTION: '.$e->getMessage(), __METHOD__.','.__LINE__);
+                $logger->logUserError(get_class($e).": ".$e->getMessage(), __METHOD__.','.__LINE__);
             }
+            $dashboard_module_cacher->cacheDashboardModules();
 
-            $instance_dao->save($crawler->instance, 0, $logger);
+            $instance_dao->save($facebook_crawler->instance, 0, $logger);
+            Reporter::reportVersion($instance);
             $logger->logUserSuccess("Finished collecting data for ".$instance->network_username."'s ".
             ucwords($instance->network), __METHOD__.','.__LINE__);
+        }
+    }
+
+    /**
+     * Send user email alert about invalid OAuth tokens, at most one message per week.
+     * In test mode, this will only write the message body to a file in the application data directory.
+     * @param str $email
+     * @param str $username
+     * @return bool Whether or not email was sent
+     */
+    private function sendInvalidOAuthEmailAlert($email, $username) {
+        //Determine whether or not an email about invalid tokens was sent in the past 7 days
+        $should_send_email = true;
+        $option_dao = DAOFactory::getDAO('OptionDAO');
+        $plugin_dao = DAOFactory::getDAO('PluginDAO');
+
+        $plugin_id = $plugin_dao->getPluginId('facebook');
+        $last_email_timestamp = $option_dao->getOptionByName(OptionDAO::PLUGIN_OPTIONS.'-'.$plugin_id,
+        'invalid_oauth_email_sent_timestamp');
+        if (isset($last_email_timestamp)) { //option exists, a message was sent
+            //a message was sent in the past week
+            if ($last_email_timestamp->option_value > strtotime('-1 week') ) {
+                $should_send_email = false;
+            } else {
+                $option_dao->updateOption($last_email_timestamp->option_id, time());
+            }
+        } else {
+            $option_dao->insertOption(OptionDAO::PLUGIN_OPTIONS.'-'.$plugin_id,
+            'invalid_oauth_email_sent_timestamp', time());
+        }
+
+        if ($should_send_email) {
+            $mailer_view_mgr = new ViewManager();
+            $mailer_view_mgr->caching=false;
+
+            $mailer_view_mgr->assign('thinkup_site_url', Utils::getApplicationURL());
+            $mailer_view_mgr->assign('email', $email );
+            $mailer_view_mgr->assign('faceboook_user_name', $username);
+            $message = $mailer_view_mgr->fetch(Utils::getPluginViewDirectory('facebook').'_email.invalidtoken.tpl');
+
+            Mailer::mail($email, "Please re-authorize ThinkUp to access ". $username. " on Facebook", $message);
+            return true;
+        } else {
+            return false;
         }
     }
 
     public function renderConfiguration($owner) {
         $controller = new FacebookPluginConfigurationController($owner);
         return $controller->go();
+    }
+
+    public function renderInstanceConfiguration($owner, $instance_username, $instance_network) {
+        return '';
     }
 
     public function getDashboardMenuItems($instance) {
@@ -138,13 +212,13 @@ class FacebookPlugin extends Plugin implements CrawlerPlugin, DashboardPlugin, P
         $friend_fan_menu_title = $instance->network == 'facebook page'?'Fans':'Friends';
         $friends_menu_item = new MenuItem($friend_fan_menu_title, "Friends insights", $friends_data_tpl);
 
-        $friends_menu_ds_2 = new Dataset("follower_count_history_by_day", 'FollowerCountDAO', 'getHistory',
+        $friends_menu_ds_2 = new Dataset("follower_count_history_by_day", 'CountHistoryDAO', 'getHistory',
         array($instance->network_user_id, $instance->network, 'DAY', 15));
         $friends_menu_item->addDataset($friends_menu_ds_2);
-        $friends_menu_ds_3 = new Dataset("follower_count_history_by_week", 'FollowerCountDAO', 'getHistory',
+        $friends_menu_ds_3 = new Dataset("follower_count_history_by_week", 'CountHistoryDAO', 'getHistory',
         array($instance->network_user_id, $instance->network, 'WEEK', 15));
         $friends_menu_item->addDataset($friends_menu_ds_3);
-        $friends_menu_ds_4 = new Dataset("follower_count_history_by_month", 'FollowerCountDAO', 'getHistory',
+        $friends_menu_ds_4 = new Dataset("follower_count_history_by_month", 'CountHistoryDAO', 'getHistory',
         array($instance->network_user_id, $instance->network, 'MONTH', 11));
         $friends_menu_item->addDataset($friends_menu_ds_4);
 

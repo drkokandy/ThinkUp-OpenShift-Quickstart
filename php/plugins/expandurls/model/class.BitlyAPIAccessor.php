@@ -3,11 +3,11 @@
  *
  * ThinkUp/webapp/plugins/expandurls/model/class.BitlyAPIAccessor.php
  *
- * Copyright (c) 2011-2012 Randi Miller
+ * Copyright (c) 2011-2013 Randi Miller
  *
  * LICENSE:
  *
- * This file is part of ThinkUp (http://thinkupapp.com).
+ * This file is part of ThinkUp (http://thinkup.com).
  *
  * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
@@ -23,7 +23,7 @@
 /**
  * @author Randi Miller <techrandy[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2011-2012 Randi Miller
+ * @copyright 2011-2013 Randi Miller
  */
 class BitlyAPIAccessor {
     /**

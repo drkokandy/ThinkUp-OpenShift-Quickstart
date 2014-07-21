@@ -3,11 +3,11 @@
  *
  * ThinkUp/webapp/_lib/model/class.Group.php
  *
- * Copyright (c) 2011-2012 SwellPath, Inc.
+ * Copyright (c) 2011-2013 SwellPath, Inc.
  *
  * LICENSE:
  *
- * This file is part of ThinkUp (http://thinkupapp.com).
+ * This file is part of ThinkUp (http://thinkup.com).
  *
  * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
@@ -27,7 +27,7 @@
  * This class represents social network groups or lists like @ginatrapani/lifehackers on Twitter.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2011-2012 SwellPath, Inc.
+ * @copyright 2011-2013 SwellPath, Inc.
  * @author Christian G. Warden <cwarden[at]xerus[dot]org>
  *
  */
@@ -60,6 +60,14 @@ class Group {
      * @var str Last time this group was seen on the originating network.
      */
     var $last_seen;
+    /**
+     * @var str Non-persistent storage for URL to group
+     */
+    var $url;
+    /**
+     * @var str Non-persistent keyword or phrase describing group
+     */
+    var $keyword;
     public function __construct($val = false) {
         if ($val) {
             if (isset($val['id'])) {
@@ -71,6 +79,14 @@ class Group {
             $this->is_active = PDODAO::convertDBToBool($val['is_active']);
             $this->first_seen = $val['first_seen'];
             $this->last_seen = $val['last_seen'];
+        }
+    }
+
+    public function setMetadata() {
+        if ($this->network == 'twitter') {
+            $this->url = 'http://twitter.com/'.substr($this->group_name,1);
+            $parts = preg_split("(\/)", $this->group_name);
+            $this->keyword = $parts[1];
         }
     }
 }

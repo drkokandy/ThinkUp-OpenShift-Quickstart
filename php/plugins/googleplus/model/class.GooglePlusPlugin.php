@@ -3,11 +3,11 @@
  *
  * ThinkUp/webapp/plugins/googleplus/model/class.GooglePlusPlugin.php
  *
- * Copyright (c) 2011-2012 Gina Trapani
+ * Copyright (c) 2011-2013 Gina Trapani
  *
  * LICENSE:
  *
- * This file is part of ThinkUp (http://thinkupapp.com).
+ * This file is part of ThinkUp (http://thinkup.com).
  *
  * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
@@ -22,7 +22,7 @@
  *
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2011-2012 Gina Trapani
+ * @copyright 2011-2013 Gina Trapani
  */
 class GooglePlusPlugin extends Plugin implements CrawlerPlugin, DashboardPlugin, PostDetailPlugin {
 
@@ -44,6 +44,10 @@ class GooglePlusPlugin extends Plugin implements CrawlerPlugin, DashboardPlugin,
         return $controller->go();
     }
 
+    public function renderInstanceConfiguration($owner, $instance_username, $instance_network) {
+        return '';
+    }
+
     public function crawl() {
         $logger = Logger::getInstance();
         $config = Config::getInstance();
@@ -57,15 +61,12 @@ class GooglePlusPlugin extends Plugin implements CrawlerPlugin, DashboardPlugin,
         $current_owner = $owner_dao->getByEmail(Session::getLoggedInUser());
 
         //crawl Google+ users
-        $instances = $instance_dao->getAllActiveInstancesStalestFirstByNetwork('google+');
+        $instances = $instance_dao->getActiveInstancesStalestFirstForOwnerByNetworkNoAuthError($current_owner,
+        'google+');
 
         if (isset($options['google_plus_client_id']->option_value)
         && isset($options['google_plus_client_secret']->option_value)) {
             foreach ($instances as $instance) {
-                if (!$owner_instance_dao->doesOwnerHaveAccessToInstance($current_owner, $instance)) {
-                    // Owner doesn't have access to this instance; let's not crawl it.
-                    continue;
-                }
                 $logger->setUsername(ucwords($instance->network) . ' | '.$instance->network_username );
                 $logger->logUserSuccess("Starting to collect data for ".$instance->network_username."'s ".
                 ucwords($instance->network), __METHOD__.','.__LINE__);
@@ -75,18 +76,21 @@ class GooglePlusPlugin extends Plugin implements CrawlerPlugin, DashboardPlugin,
                 $refresh_token = $tokens['oauth_access_token_secret'];
 
                 $instance_dao->updateLastRun($instance->id);
-                $crawler = new GooglePlusCrawler($instance, $access_token);
+                $google_plus_crawler = new GooglePlusCrawler($instance, $access_token);
+                $dashboard_module_cacher = new DashboardModuleCacher($instance);
                 try {
-                    $crawler->initializeInstanceUser($options['google_plus_client_id']->option_value,
+                    $google_plus_crawler->initializeInstanceUser($options['google_plus_client_id']->option_value,
                     $options['google_plus_client_secret']->option_value, $access_token, $refresh_token,
                     $current_owner->id);
 
-                    $crawler->fetchInstanceUserPosts();
+                    $google_plus_crawler->fetchInstanceUserPosts();
                 } catch (Exception $e) {
                     $logger->logUserError('EXCEPTION: '.$e->getMessage(), __METHOD__.','.__LINE__);
                 }
 
-                $instance_dao->save($crawler->instance, 0, $logger);
+                $dashboard_module_cacher->cacheDashboardModules();
+                $instance_dao->save($google_plus_crawler->instance, 0, $logger);
+                Reporter::reportVersion($instance);
                 $logger->logUserSuccess("Finished collecting data for ".$instance->network_username."'s ".
                 ucwords($instance->network), __METHOD__.','.__LINE__);
             }
@@ -135,7 +139,6 @@ class GooglePlusPlugin extends Plugin implements CrawlerPlugin, DashboardPlugin,
 
         $menus['posts'] = $posts_menu_item;
 
-
         $gp_data_tpl = Utils::getPluginViewDirectory('googleplus').'googleplus.inline.view.tpl';
 
         //All tab
@@ -171,6 +174,7 @@ class GooglePlusPlugin extends Plugin implements CrawlerPlugin, DashboardPlugin,
         $qtabds->addHelp('userguide/listings/googleplus/dashboard_questions');
         $qtab->addDataset($qtabds);
         $menus["posts-questions"] = $qtab;
+
         return $menus;
     }
 }

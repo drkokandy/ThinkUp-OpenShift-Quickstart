@@ -3,11 +3,11 @@
  *
  * ThinkUp/webapp/_lib/controller/class.PostController.php
  *
- * Copyright (c) 2009-2012 Gina Trapani, Mark Wilkie
+ * Copyright (c) 2009-2013 Gina Trapani, Mark Wilkie
  *
  * LICENSE:
  *
- * This file is part of ThinkUp (http://thinkupapp.com).
+ * This file is part of ThinkUp (http://thinkup.com).
  *
  * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
@@ -26,7 +26,7 @@
  * Displays a post and its replies, retweets, reach, and location information.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2012 Gina Trapani, Mark Wilkie
+ * @copyright 2009-2013 Gina Trapani, Mark Wilkie
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
  */
@@ -57,8 +57,14 @@ class PostController extends ThinkUpController {
                     }
 
                     $viewer_has_access_to_post = false;
-                    if ( !$post->is_protected ) {
-                        $viewer_has_access_to_post = true;
+                    if ( !$post->is_protected ) { // post is public
+                        if ($this->isLoggedIn()) { // user is logged in
+                            $viewer_has_access_to_post = true;
+                        } else { //not logged in
+                            $instance_dao = DAOFactory::getDAO('InstanceDAO');
+                            $viewer_has_access_to_post = $instance_dao->isInstancePublic($post->author_username,
+                            $post->network);
+                        }
                     } elseif ($this->isLoggedIn()) {
                         $owner_dao = DAOFactory::getDAO('OwnerDAO');
                         $owner = $owner_dao->getByEmail($this->getLoggedInUser());
@@ -110,8 +116,8 @@ class PostController extends ThinkUpController {
                         $private_reply_count = $all_replies_count - $public_replies_count;
                         $this->addToView('private_reply_count', $private_reply_count );
 
-                        $webapp = Webapp::getInstance();
-                        $sidebar_menu = $webapp->getPostDetailMenu($post);
+                        $webapp_plugin_registrar = PluginRegistrarWebapp::getInstance();
+                        $sidebar_menu = $webapp_plugin_registrar->getPostDetailMenu($post);
                         $this->addToView('sidebar_menu', $sidebar_menu);
                         $this->loadView($post);
                     } else {
@@ -131,9 +137,9 @@ class PostController extends ThinkUpController {
      * Load the view with required variables
      */
     private function loadView($post) {
-        $webapp = Webapp::getInstance();
+        $webapp_plugin_registrar = PluginRegistrarWebapp::getInstance();
         if ($this->view_name != 'default') {
-            $menu_item = $webapp->getPostDetailMenuItem($this->view_name, $post);
+            $menu_item = $webapp_plugin_registrar->getPostDetailMenuItem($this->view_name, $post);
             if ($menu_item != null ) {
                 $this->addToView('data_template', $menu_item->view_template);
                 $this->addToView('display', $this->view_name);

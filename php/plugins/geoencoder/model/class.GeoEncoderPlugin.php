@@ -3,11 +3,11 @@
  *
  * ThinkUp/webapp/plugins/geoencoder/model/class.GeoEncoderPlugin.php
  *
- * Copyright (c) 2009-2012 Ekansh Preet Singh, Mark Wilkie
+ * Copyright (c) 2009-2013 Ekansh Preet Singh, Mark Wilkie
  *
  * LICENSE:
  *
- * This file is part of ThinkUp (http://thinkupapp.com).
+ * This file is part of ThinkUp (http://thinkup.com).
  *
  * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
@@ -26,7 +26,7 @@
  * for Geolocation visualization later.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2012 Ekansh Preet Singh, Mark Wilkie
+ * @copyright 2009-2013 Ekansh Preet Singh, Mark Wilkie
  * @author Ekansh Preet Singh <ekanshpreet[at]gmail[dot]com>
  * @author Mark Wilkie <mwilkie[at]gmail[dot]com>
  *
@@ -50,7 +50,7 @@ class GeoEncoderPlugin extends Plugin implements CrawlerPlugin, PostDetailPlugin
         $logger = Logger::getInstance();
         $logger->setUsername(null);
         $post_dao = DAOFactory::getDAO('PostDAO');
-        $crawler = new GeoEncoderCrawler;
+        $geoencoder_crawler = new GeoEncoderCrawler();
 
         $posts_to_geoencode = $post_dao->getPostsToGeoencode(2000);
         $logger->logUserSuccess("Starting to collect lat/long points for ".count($posts_to_geoencode)." posts.",
@@ -59,11 +59,11 @@ class GeoEncoderPlugin extends Plugin implements CrawlerPlugin, PostDetailPlugin
         $total_api_requests_fulfilled = 0;
         foreach ($posts_to_geoencode as $post_data) {
             if ($post_data['geo']!='') {
-                if ($crawler->performReverseGeoencoding($post_dao, $post_data)) {
+                if ($geoencoder_crawler->performReverseGeoencoding($post_dao, $post_data)) {
                     $total_api_requests_fulfilled++;
                 }
             } else {
-                if ($crawler->performGeoencoding($post_dao, $post_data)) {
+                if ($geoencoder_crawler->performGeoencoding($post_dao, $post_data)) {
                     $total_api_requests_fulfilled++;
                 }
             }
@@ -77,11 +77,15 @@ class GeoEncoderPlugin extends Plugin implements CrawlerPlugin, PostDetailPlugin
         return $controller->go();
     }
 
+    public function renderInstanceConfiguration($owner, $instance_username, $instance_network) {
+        return '';
+    }
+
     public function getPostDetailMenuItems($post) {
         $menus = array();
         $map_template_path = Utils::getPluginViewDirectory('geoencoder').'geoencoder.map.tpl';
         if ($post->is_geo_encoded == 1) {
-            //Define a menu item
+        //Define a menu item
             $map_menu_item = new MenuItem("Response Map", "", $map_template_path, 'GeoEncoder');
             //Define a dataset to be displayed when that menu item is selected
             $map_menu_item_dataset_1 = new Dataset("geoencoder_map", 'PostDAO', "getRelatedPosts",

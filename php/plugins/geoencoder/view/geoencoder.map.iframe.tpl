@@ -7,10 +7,6 @@
   <link type="text/css" rel="stylesheet" href="{$site_root_path}assets/css/base.css">
   <link type="text/css" rel="stylesheet" href="{$site_root_path}assets/css/style.css">
 
-  <!-- jquery -->
-  <link type="text/css" rel="stylesheet" href="{$site_root_path}assets/css/jquery-ui-1.8.13.css">
-  <script type="text/javascript" src="{$site_root_path}assets/js/jquery.min-1.4.js"></script>
-  <script type="text/javascript" src="{$site_root_path}assets/js/jquery-ui.min-1.8.js"></script>
   <script type="text/javascript">var site_root_path = '{$site_root_path}';</script>
   {foreach from=$header_scripts item=script}
     <script type="text/javascript" src="{$site_root_path}{$script}"></script>
@@ -38,10 +34,16 @@
         <div id="map"></div>
       </div>
       <div id="userpanel">
-        <h3>All Post Locations</h3>
-        <div class="columns" id="markerlist0"></div>
-        <div class="columns" id="markerlist1"></div>
-        <div class="columns" id="markerlist2"></div>
+        <table class="table table-striped table-bordered table-condensed">
+            <tbody>
+                <tr>
+                    <td id="markerlist0"></td>
+                    <td id="markerlist1"></td>
+                    <td id="markerlist2"></td>
+                </tr>
+            </tbody>
+        </table>
+
       </div>
       {/if}
      </div>

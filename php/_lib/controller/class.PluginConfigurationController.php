@@ -3,11 +3,11 @@
  *
  * ThinkUp/webapp/_lib/controller/class.PluginConfigurationController.php
  *
- * Copyright (c) 2009-2012 Mark Wilkie, Gina Trapani
+ * Copyright (c) 2009-2013 Mark Wilkie, Gina Trapani
  *
  * LICENSE:
  *
- * This file is part of ThinkUp (http://thinkupapp.com).
+ * This file is part of ThinkUp (http://thinkup.com).
  *
  * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
@@ -65,7 +65,7 @@
  *
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2012 Mark Wilkie, Gina Trapani
+ * @copyright 2009-2013 Mark Wilkie, Gina Trapani
  * @author Mark Wilkie <mwilkie[at]gmail[dot]com>
  */
 
@@ -141,6 +141,12 @@ abstract class PluginConfigurationController extends ThinkUpAuthController {
      */
     var $options_hash = array();
 
+    /**
+     * Whether or not to show button to add user
+     * @var bool
+     */
+    var $do_show_add_button = true;
+
     public function __construct($owner, $folder_name) {
         parent::__construct(true);
         $this->owner = $owner;
@@ -155,6 +161,17 @@ abstract class PluginConfigurationController extends ThinkUpAuthController {
             $plugin_dao = DAOFactory::getDAO('PluginDAO');
             $this->plugin_id = $plugin_dao->getPluginId($folder_name);
         }
+        if (($owner instanceof Owner) && $owner != null && $owner->isProLevel()) {
+            // For Pro users, cap instances at 10
+            $owner_instance_dao = DAOFactory::getDAO('OwnerInstanceDAO');
+            $owner_instances = $owner_instance_dao->getByOwner($this->owner->id);
+            $total_instances = sizeof($owner_instances);
+            if ($total_instances >= 9) {
+                $this->do_show_add_button = false;
+                $this->addInfoMessage("You've connected ".$total_instances." of 10 accounts to ThinkUp.",
+                'membership_cap');
+            }
+        }
     }
 
     /**
@@ -167,7 +184,7 @@ abstract class PluginConfigurationController extends ThinkUpAuthController {
         // render them and add to the parent view...
         if (count($this->option_elements) > 0) {
             $this->setValues();
-            $view_mgr = new SmartyThinkUp();
+            $view_mgr = new ViewManager();
             $view_mgr->disableCaching();
             // assign data
             $view_mgr->assign('option_elements', $this->option_elements);

@@ -1,57 +1,70 @@
+<div class="plugin-info">
+
+    <span class="pull-right">{insert name="help_link" id='twitter'}</span>
+    <h2>
+        <i class="icon-twitter icon-muted"></i> Twitter 
+    </h2>
+
+</div>
+
 {include file="_usermessage.tpl"}
 
-<div class="append_20 alert helpful">
-{insert name="help_link" id='twitter'}
-<h2>Twitter Plugin </h2>
+{if count($owner_instances) > 0 }{include file="_usermessage.tpl" field="user_add"}{/if}
 
-    <div class="">
-    <p>The Twitter plugin captures and displays tweets, replies, mentions, retweets, friends, followers, favorites, links, and photos.</p>
-    
-    </div>
-</div>
-
-<div class="append_20">
-
-{if $oauthorize_link}
-<div id="add-account-div" style="display: none; padding-top : 20px;">
-<a href="{$oauthorize_link}" class="linkbutton emphasized">Add a Twitter account</a>
-<br /><br />
-</div>
-{/if}
 {if count($owner_instances) > 0 }
-<br>
-<h2 class="subhead">Twitter Accounts</h2>
+
+<table class="table">
+
+    <tr>
+        <th><h4 class="pull-left">Account</h4></th>
+        <th><i class="icon-lock icon-2x icon-muted"></i></th>
+        {if $user_is_admin}<th><i class="icon-refresh icon-2x icon-muted"></i></th>{/if}
+        <th><i class="icon-tag icon-2x icon-muted"></i></th>
+        <th><i class="icon-trash icon-2x icon-muted"></i></th>
+    </tr>
+        
     {foreach from=$owner_instances key=iid item=i name=foo}
-        <div class="clearfix">
-        <div class="grid_4 right" style="padding-top:.5em;">
-            <a href="{$site_root_path}?u={$i->network_username}">{$i->network_username}</a>
-        </div>
-        <div class="grid_4 right">
-            <span id="div{$i->id}"><input type="submit" name="submit" class="linkbutton
-            {if $i->is_public}btnPriv{else}btnPub{/if}" id="{$i->id}" value="{if $i->is_public}set private{else}set public{/if}" /></span>
-        </div>
-        <div class="grid_4 right">
-            <span id="divactivate{$i->id}"><input type="submit" name="submit" class="linkbutton {if $i->is_active}btnPause{else}btnPlay{/if}" id="{$i->id}" value="{if $i->is_active}pause crawling{else}start crawling{/if}" /></span>
-        </div>
-        <div class="grid_8 right">
-            <span id="delete{$i->id}"><form method="post" action="{$site_root_path}account/?p=twitter">
+    <tr>
+        <td>
+            <h3 class="lead"><i class="icon-twitter icon-muted"></i>&nbsp;<a href="https://twitter.com/intent/user?screen_name={$i->network_username}">@{$i->network_username}</a></h3>
+        </td>
+        <td class="action-button">
+            <span id="div{$i->id}"><input type="submit" name="submit" class="btn
+            {if $i->is_public}btnPriv{else}btnPub{/if}" id="{$i->id}" value="{if $i->is_public} Set private{else}Set public{/if}" /></span>
+        </td>
+        {if $user_is_admin}
+        <td class="action-button">
+            <span id="divactivate{$i->id}"><input type="submit" name="submit" class="btn {if $i->is_active}btnPause{else}btnPlay{/if}" id="{$i->id}" value="{if $i->is_active}Pause crawling{else}Start crawling{/if}" /></span>
+        </td>
+        {/if}
+        <td class="action-button">
+            <a href="{$site_root_path}account/?p=twitter&u={$i->network_username}&n=twitter#manage_plugin" class="btn btn-info btnHashtag">Saved searches</a>
+        </td>
+        <td class="action-button">
+            <span id="delete{$i->id}"><form method="post" action="{$site_root_path}account/?p=twitter#manage_plugin">
             <input type="hidden" name="instance_id" value="{$i->id}">
             {insert name="csrf_token"}<input
             onClick="return confirm('Do you really want to delete this Twitter account?');"
-            type="submit" name="action" class="linkbutton" 
-            value="delete" /></form></span>
-        </div>
-        </div>
+            type="submit" name="action" class="btn btn-danger" 
+            value="Delete" /></form></span>
+        </td>
+    </tr>
     {/foreach}
+
+</table>
 {/if}
-</div>
+
+{include file="_usermessage.tpl" field="membership_cap"}
+
+
+{if $oauthorize_link}
+<a href="{$oauthorize_link}" class="btn btn-success add-account"><i class="icon-plus icon-white"></i> Add a Twitter account</a>
+{/if}
+
 
 <div id="contact-admin-div" style="display: none;">
 {include file="_plugin.admin-request.tpl"}
 </div>
-
-<!--<p>Alternately, add a public Twitter username for ThinkUp capture data about:</p>
-<form method="get" action="index.php"><input type="hidden" name="p" value="twitter"><input name="twitter_username" /> <input type="submit" value="Add this Public User to ThinkUp"></form>-->
 
 {if $user_is_admin}
 {include file="_plugin.showhider.tpl"}
@@ -95,7 +108,7 @@
     <br />
     Callback URL:
     <small>
-      <code style="font-family:Courier;" id="clippy_2988">{$thinkup_site_url}plugins/twitter/auth.php</code>
+      <code style="font-family:Courier;" id="clippy_2988">{$thinkup_site_url}account/?p=twitter</code>
     </small>
     <object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000"
               width="100"

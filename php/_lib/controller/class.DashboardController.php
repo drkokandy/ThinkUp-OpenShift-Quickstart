@@ -3,11 +3,11 @@
  *
  * ThinkUp/webapp/_lib/controller/class.DashboardController.php
  *
- * Copyright (c) 2009-2012 Gina Trapani, Mark Wilkie
+ * Copyright (c) 2009-2013 Gina Trapani, Mark Wilkie
  *
  * LICENSE:
  *
- * This file is part of ThinkUp (http://thinkupapp.com).
+ * This file is part of ThinkUp (http://thinkup.com).
  *
  * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
@@ -26,7 +26,7 @@
  * The main controller which displays a given view for a give instance user.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2012 Gina Trapani, Mark Wilkie
+ * @copyright 2009-2013 Gina Trapani, Mark Wilkie
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
  */
@@ -48,10 +48,10 @@ class DashboardController extends ThinkUpController {
             $this->setInstance();
 
             $this->view_name = (isset($_GET['v']))?$_GET['v']:'default';
-            $webapp = Webapp::getInstance();
+            $webapp_plugin_registrar = PluginRegistrarWebapp::getInstance();
             if (isset($this->instance)) {
-                $webapp->setActivePlugin($this->instance->network);
-                $sidebar_menu = $webapp->getDashboardMenu($this->instance);
+                $webapp_plugin_registrar->setActivePlugin($this->instance->network);
+                $sidebar_menu = $webapp_plugin_registrar->getDashboardMenu($this->instance);
                 $this->addToView('sidebar_menu', $sidebar_menu);
                 $this->loadView();
             } else {
@@ -83,11 +83,11 @@ class DashboardController extends ThinkUpController {
      * Load the view with required variables
      */
     private function loadView() {
-        $webapp = Webapp::getInstance();
+        $webapp_plugin_registrar = PluginRegistrarWebapp::getInstance();
         if ($this->view_name == 'default') {
             $this->loadDefaultDashboard();
         } else {
-            $menu_item = $webapp->getDashboardMenuItem($this->view_name, $this->instance);
+            $menu_item = $webapp_plugin_registrar->getDashboardMenuItem($this->view_name, $this->instance);
             if (isset($menu_item)) {
                 $this->addToView('data_template', $menu_item->view_template);
                 $this->addToView('display', $this->view_name);
@@ -125,10 +125,10 @@ class DashboardController extends ThinkUpController {
         if ($this->isLoggedIn()) {
             $owner_dao = DAOFactory::getDAO('OwnerDAO');
             $owner = $owner_dao->getByEmail($this->getLoggedInUser());
+            $owner_instance_dao = DAOFactory::getDAO('OwnerInstanceDAO');
             if (isset($_GET["u"]) && isset($_GET['n'])) {
                 $instance = $instance_dao->getByUsernameOnNetwork(stripslashes($_GET["u"]), $_GET['n']);
                 if (isset($instance)) {
-                    $owner_instance_dao = DAOFactory::getDAO('OwnerInstanceDAO');
                     if ($owner_instance_dao->doesOwnerHaveAccessToInstance($owner, $instance)) {
                         $this->instance = $instance;
                     } else {
@@ -140,6 +140,15 @@ class DashboardController extends ThinkUpController {
                 }
             } else {
                 $this->instance = $instance_dao->getFreshestByOwnerId($owner->id);
+            }
+            $owner_instance = $owner_instance_dao->get($owner->id, $this->instance->id);
+            if (isset($owner_instance) && $owner_instance->auth_error != '') {
+                $this->addErrorMessage("ThinkUp can't connect to your ". ucwords($this->instance->network).
+                " account. This is probably normal - the connection expires after a certain amount of time. ".
+                "To fix it, in <a href=\"account/?p=".
+                (($this->instance->network=='facebook page')?'facebook':$this->instance->network)."\">".
+                ucwords($this->instance->network).
+                " settings</a>, re-add this account.", null, true);
             }
             $this->addToView('instances', $instance_dao->getByOwner($owner));
         } else {
@@ -208,26 +217,39 @@ class DashboardController extends ThinkUpController {
         if (isset($this->instance)) {
             $this->setPageTitle($this->instance->network_username . "'s Dashboard");
 
-            $post_dao = DAOFactory::getDAO('PostDAO');
+            $insight_dao = DAOFactory::getDAO('InsightDAO');
 
-            $hot_posts = $post_dao->getHotPosts($this->instance->network_user_id, $this->instance->network, 10);
-            if (sizeof($hot_posts) > 3) {
-                $hot_posts_data = self::getHotPostVisualizationData($hot_posts, $this->instance->network);
+            $hot_posts_data = $insight_dao->getPreCachedInsightData('PostMySQLDAO::getHotPosts', $this->instance->id,
+            date('Y-m-d'));
+            if (isset($hot_posts_data)) {
                 $this->addToView('hot_posts_data', $hot_posts_data);
             }
 
-            $short_link_dao = DAOFactory::getDAO('ShortLinkDAO');
-            $click_stats = $short_link_dao->getRecentClickStats($this->instance, 10);
-            if (sizeof($click_stats) > 3) {
-                $click_stats_data = self::getClickStatsVisualizationData($click_stats);
+            $yearly_popular = $insight_dao->getPreCachedInsightData('PostMySQLDAO::getMostPopularPostsOfTheYear',
+            $this->instance->id, date('Y-m-d'));
+            if (isset($yearly_popular)) {
+                if (date('n') == 12) {
+                    $yearly_popular_year = date('Y');
+                } else {
+                    $yearly_popular_year = intval(date('Y'))-1;
+                }
+                $this->addToView('yearly_popular', $yearly_popular);
+                $this->addToView('yearly_popular_year', $yearly_popular_year);
+            }
+
+            $click_stats_data = $insight_dao->getPreCachedInsightData( 'ShortLinkMySQLDAO::getRecentClickStats',
+            $this->instance->id, date('Y-m-d'));
+            if (isset($click_stats_data)) {
                 $this->addToView('click_stats_data', $click_stats_data);
             }
 
-            $most_replied_to_1wk = $post_dao->getMostRepliedToPostsInLastWeek($this->instance->network_username,
-            $this->instance->network, 5);
+            $post_dao = DAOFactory::getDAO('PostDAO');
+            $most_replied_to_1wk = $insight_dao->getPreCachedInsightData(
+            'PostMySQLDAO::getMostRepliedToPostsInLastWeek', $this->instance->id, date('Y-m-d'));
             $this->addToView('most_replied_to_1wk', $most_replied_to_1wk);
-            $most_retweeted_1wk = $post_dao->getMostRetweetedPostsInLastWeek($this->instance->network_username,
-            $this->instance->network, 5);
+
+            $most_retweeted_1wk = $insight_dao->getPreCachedInsightData(
+            'PostMySQLDAO::getMostRetweetedPostsInLastWeek', $this->instance->id, date('Y-m-d'));
             $this->addToView('most_retweeted_1wk', $most_retweeted_1wk);
             //for now, only show most liked/faved posts on Facebook dashboard
             //once we cache fave counts for Twitter, we can remove this conditional
@@ -238,139 +260,69 @@ class DashboardController extends ThinkUpController {
                 $this->addToView('most_faved_1wk', $most_faved_1wk);
             }
 
-            //follows
-            $follow_dao = DAOFactory::getDAO('FollowDAO');
-            $least_likely_followers = $follow_dao->getLeastLikelyFollowersThisWeek($this->instance->network_user_id,
-            'twitter', 12);
+            //follows - these are pre-cached in insights
+            $least_likely_followers = $insight_dao->getPreCachedInsightData(
+            'FollowMySQLDAO::getLeastLikelyFollowersThisWeek', $this->instance->id, date('Y-m-d'));
             $this->addToView('least_likely_followers', $least_likely_followers);
 
             //follower count history
             //by day
-            $follower_count_dao = DAOFactory::getDAO('FollowerCountDAO');
-            $follower_count_history_by_day = $follower_count_dao->getHistory($this->instance->network_user_id,
+            $count_dao = DAOFactory::getDAO('CountHistoryDAO');
+            $follower_count_history_by_day = $count_dao->getHistory($this->instance->network_user_id,
             $this->instance->network, 'DAY', 5);
             $this->addToView('follower_count_history_by_day', $follower_count_history_by_day);
 
             //by week
-            $follower_count_history_by_week = $follower_count_dao->getHistory($this->instance->network_user_id,
+            $follower_count_history_by_week = $count_dao->getHistory($this->instance->network_user_id,
             $this->instance->network, 'WEEK', 5);
             $this->addToView('follower_count_history_by_week', $follower_count_history_by_week);
 
-            $post_dao = DAOFactory::getDAO('PostDAO');
             list($all_time_clients_usage, $latest_clients_usage) =
-            $post_dao->getClientsUsedByUserOnNetwork($this->instance->network_user_id, $this->instance->network);
+            $insight_dao->getPreCachedInsightData(
+            'PostMySQLDAO::getClientsUsedByUserOnNetwork', $this->instance->id, date('Y-m-d'));
 
-            // The sliceVisibilityThreshold option in the chart will prevent small slices from being created
-            $all_time_clients_usage = self::getClientUsageVisualizationData($all_time_clients_usage);
-            $this->addToView('all_time_clients_usage', $all_time_clients_usage);
+            if (is_array($all_time_clients_usage)) {
+                // The sliceVisibilityThreshold option in the chart will prevent small slices from being created
+                $all_time_clients_usage =
+                DashboardModuleCacher::getClientUsageVisualizationData($all_time_clients_usage);
+                $this->addToView('all_time_clients_usage', $all_time_clients_usage);
+            }
 
-            // Only show the two most used clients for the last 25 posts
-            $latest_clients_usage = array_slice($latest_clients_usage, 0, 2);
-            $this->addToView('latest_clients_usage', $latest_clients_usage);
+            if (is_array($latest_clients_usage) && sizeof($latest_clients_usage > 1)) {
+                // Only show the two most used clients for the last 25 posts
+                $latest_clients_usage = array_slice($latest_clients_usage, 0, 2);
+                $this->addToView('latest_clients_usage', $latest_clients_usage);
+            }
+
+            $posts_flashback = $insight_dao->getPreCachedInsightData('PostMySQLDAO::getOnThisDayFlashbackPosts',
+            $this->instance->id, date('Y-m-d'));
+            $this->addToView('posts_flashback', $posts_flashback);
+
+            // Foursquare items
+            if ($this->instance->network == "foursquare") {
+                // Checkins per hour
+                $checkins_per_hour = $insight_dao->getPreCachedInsightData(
+                'PostMySQLDAO::getPostsPerHourDataVis', $this->instance->id, date('Y-m-d'));
+                $this->addToView('checkins_per_hour', $checkins_per_hour);
+
+                // Checkins by type of place - all time
+                $place_types = $insight_dao->getPreCachedInsightData(
+                'PostMySQLDAO::countCheckinsToPlaceTypes', $this->instance->id, date('Y-m-d'));
+                $this->addToView('checkins_by_type', $place_types);
+
+                // Checkins by type of place - last week
+                $place_types_last_week = $insight_dao->getPreCachedInsightData(
+                'PostMySQLDAO::countCheckinsToPlaceTypesLastWeek', $this->instance->id, date('Y-m-d'));
+                $this->addToView('checkins_by_type_last_week', $place_types_last_week);
+
+                // Map of checkins in the last week
+                $checkins_map = $insight_dao->getPreCachedInsightData(
+                'PostMySQLDAO::getAllCheckinsInLastWeekAsGoogleMap', $this->instance->id, date('Y-m-d'));
+                $this->addToView('checkins_map', $checkins_map);
+            }
         } else {
             $this->addErrorMessage($username." on ".ucwords($this->instance->network).
             " isn't set up on this ThinkUp installation.");
         }
-    }
-    /**
-     * Convert Hot Posts data to JSON for use with Google Charts
-     * @param array $hot_posts Array returned from PostDAO::getHotPosts
-     * @return string JSON
-     */
-    public static function getHotPostVisualizationData($hot_posts, $network) {
-        switch ($network) {
-            case 'twitter':
-                $post_label = 'Tweet';
-                $approval_label = 'Favorites';
-                $share_label = 'Retweets';
-                $reply_label = 'Replies';
-                break;
-            case 'facebook':
-            case 'facebook page':
-                $post_label = 'Post';
-                $approval_label = 'Likes';
-                $share_label = 'Shares';
-                $reply_label = 'Comments';
-                break;
-            case 'google+':
-                $post_label = 'Post';
-                $approval_label = "+1s";
-                $share_label = 'Shares';
-                $reply_label = 'Comments';
-                break;
-            default:
-                $post_label = 'Post';
-                $approval_label = 'Favorites';
-                $share_label = 'Shares';
-                $reply_label = 'Comments';
-                break;
-        }
-        $metadata = array(
-        array('type' => 'string', 'label' => $post_label),
-        array('type' => 'number', 'label' => $reply_label),
-        array('type' => 'number', 'label' => $share_label),
-        array('type' => 'number', 'label' => $approval_label),
-        );
-        $result_set = array();
-        foreach ($hot_posts as $post) {
-            if (isset($post->post_text) && $post->post_text != '') {
-                $post_text_label = htmlspecialchars_decode(strip_tags($post->post_text), ENT_QUOTES);
-            } elseif (isset($post->link->title) && $post->link->title != '') {
-                $post_text_label = str_replace('|','', $post->link->title);
-            } elseif (isset($post->link->url) && $post->link->url != "") {
-                $post_text_label = str_replace('|','', $post->link->url);
-            } else {
-                $post_text_label = date("M j",  date_format (date_create($post->pub_date), 'U' ));
-            }
-
-            $result_set[] = array('c' => array(
-            array('v' => substr($post_text_label, 0, 100) . '...'),
-            array('v' => intval($post->reply_count_cache)),
-            array('v' => intval($post->all_retweets)),
-            array('v' => intval($post->favlike_count_cache)),
-            ));
-        }
-        return json_encode(array('rows' => $result_set, 'cols' => $metadata));
-    }
-
-    /**
-     * Convert client usage data to JSON for Google Charts
-     * @param array $client_usage Array returned from PostDAO::getClientsUsedByUserOnNetwork
-     * @return string JSON
-     */
-    public static function getClientUsageVisualizationData($client_usage) {
-        $metadata = array(
-        array('type' => 'string', 'label' => 'Client'),
-        array('type' => 'number', 'label' => 'Posts'),
-        );
-        $result_set = array();
-        foreach ($client_usage as $client => $posts) {
-            $result_set[] = array('c' => array(
-            array('v' => $client, 'f' => $client),
-            array('v' => intval($posts)),
-            ));
-        }
-        return json_encode(array('rows' => $result_set, 'cols' => $metadata));
-    }
-
-    /**
-     * Convert click stats data to JSON for Google Charts
-     * @param array $click_stats Array returned from ShortLinkDAO::getRecentClickStats
-     * @return string JSON
-     */
-    public static function getClickStatsVisualizationData($click_stats) {
-        $metadata = array(
-        array('type' => 'string', 'label' => 'Link'),
-        array('type' => 'number', 'label' => 'Clicks'),
-        );
-        $result_set = array();
-        foreach ($click_stats as $link_stat) {
-            $post_text_label = htmlspecialchars_decode(strip_tags($link_stat['post_text']), ENT_QUOTES);
-            $result_set[] = array('c' => array(
-            array('v' => substr($post_text_label, 0, 100) . '...'),
-            array('v' => intval($link_stat['click_count'])),
-            ));
-        }
-        return json_encode(array('rows' => $result_set, 'cols' => $metadata));
     }
 }

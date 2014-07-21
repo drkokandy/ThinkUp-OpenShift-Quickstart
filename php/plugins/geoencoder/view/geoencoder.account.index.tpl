@@ -1,16 +1,15 @@
+<div class="plugin-info">
 
-<div class="append_20 alert helpful">
+    <span class="pull-right">{insert name="help_link" id='geoencoder'}</span>
+    <h1>
+        <img src="{$site_root_path}plugins/geoencoder/assets/img/geoencoder_icon.png" class="plugin-image">
+        GeoEncoder Plugin
+    </h1>
 
-{insert name="help_link" id='geoencoder'}
-<h2>GeoEncoder Plugin</h2>
-
-<p>
-The GeoEncoder plugin plots a post's responses on a Google Map and can lists them by distance from the original poster.
-</p>
+    <p>The GeoEncoder plugin plots a post's responses on a Google Map and can lists them by distance from the original poster.</p>
 
 </div>
 
-<div class="append_20">
 
 <div id="contact-admin-div" style="display: none; margin-top: 20px;">
 {include file="_plugin.admin-request.tpl"}
@@ -39,5 +38,6 @@ if( ! required_values_set && ! is_admin) {
 {/literal}
 </script>
 {/if}
+{if $user_is_admin}
 </div>
-<br>
+{/if}

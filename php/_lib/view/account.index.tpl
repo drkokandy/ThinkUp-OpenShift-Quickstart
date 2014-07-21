@@ -1,148 +1,224 @@
-{include file="_header.tpl" enable_tabs=true}
-{include file="_statusbar.tpl"}
+{include file="_header.tpl" enable_tabs=1 enable_bootstrap=1}
+{include file="_statusbar.tpl" enable_bootstrap=1}
 
-<div class="container_24">
+<div class="container">
 
-  <div role="application" id="tabs">
-    
-    <ul>
-      <li><a href="#plugins">Plugins</a></li>
-      {if $user_is_admin}<li><a id="app-settings-tab" href="#app_settings">Application</a></li>{/if}
-      <li><a href="#instances">Account</a></li>
-      {if $user_is_admin}<li><a href="#ttusers">Users</a></li>{/if}
-    </ul>
-    
-    <div class="section thinkup-canvas clearfix" id="plugins">
-      <div class="alpha omega grid_22 prefix_1 clearfix prepend_20 append_20">
+<div class="row">
+    <div class="span3">
+      <div id="tabs" class="embossed-block">
+        <ul class="nav nav-tabs nav-stacked">
 
-        <div class="append_20 clearfix">
-        {include file="_usermessage.tpl" field="account"}
-          {if $installed_plugins}
-            {foreach from=$installed_plugins key=ipindex item=ip name=foo}
-              {if $smarty.foreach.foo.first}
-                <div class="clearfix header">
-                  <div class="grid_17 alpha">name</div>
-                  {if $user_is_admin}
-                  <div class="grid_4 omega">activate</div>
+          <li><a href="#plugins"><i class="icon icon-list-alt"></i> Plugins <i class="icon-chevron-right"></i></a>
+
+          </li>
+          {if $user_is_admin}<li><a id="app-settings-tab" href="#app_settings"><i class="icon icon-cogs"></i> Application <i class="icon-chevron-right"></i></a></li>{/if}
+          <li><a href="#instances"><i class="icon icon-lock"></i> Account <i class="icon-chevron-right"></i></a></li>
+          {if $user_is_admin}<li><a href="#ttusers"><i class="icon icon-group"></i> Users <i class="icon-chevron-right"></i></a></li>{/if}
+        </ul>
+      </div>
+    </div><!--/span3-->
+    <div class="span9">
+        <div class="white-card">
+
+        <div class="section" id="plugins">
+
+            {include file="_usermessage.tpl" field="account"}
+              {if $installed_plugins}
+                {foreach from=$installed_plugins key=ipindex item=ip name=foo}
+                  {if $smarty.foreach.foo.first}
+                    <table class="table">
+                      <thead>
+                        <tr>
+                          <th>&nbsp;</th>
+                          <th><i class="icon icon-list-alt icon-2x icon-muted pull-left"></i></th>
+                          {if $user_is_admin}<th class="action-button"><i class="icon-cog icon-2x icon-muted"></i></th>{/if}
+                        </tr>
+                      </thead>
                   {/if}
-                </div>
+                  {if $user_is_admin || $ip->is_active}
+                        <tr>
+                            <td>
+                                <img src="{$site_root_path}plugins/{$ip->folder_name|get_plugin_path}/{$ip->icon}" class="pull-right">
+                            </td>
+                            <td>
+                                <p class="lead" style="padding-left: 0px; margin : 0px;">
+                                <a href="?p={$ip->folder_name|get_plugin_path}#manage_plugin" class="manage_plugin"><span id="spanpluginnamelink{$ip->id}">{$ip->name}</span></a>
+                                </p>
+                                <span class="muted">{$ip->description}</span>
+                            </td>
+                    {if $user_is_admin}
+                      <td class="action-button">
+                      <span id="spanpluginactivation{$ip->id}" style="margin-top : 4px;">
+                          <a href="{$site_root_path}account/?p={$ip->folder_name|get_plugin_path}#manage_plugin" class="manage_plugin btn {if !$ip->isConfigured()}btn-primary{/if}">{if $ip->isConfigured()} <i class="icon-cog "></i> Configure{else}<i class="icon-warning-sign"></i> Set Up{/if}</a>
+                      </span>
+                      <span style="display: none;" class='linkbutton' id="messageactive{$ip->id}"></span>
+                      </td>
+                    {/if}
+                      </tr>
+                  {/if}
+                {/foreach}
+                    </table>
               {/if}
-              {if $user_is_admin || $ip->is_active}
-              <div class="clearfix bt append prepend">
-                <div class="grid_18 small alpha">
-                    <a href="?p={if $ip->folder_name eq 'googleplus'}{'google+'|urlencode}{else}{$ip->folder_name}{/if}"><span id="spanpluginimage{$ip->id}"><img src="{$site_root_path}plugins/{$ip->folder_name}/{$ip->icon}" class="float-l" style="margin-right:5px;"></span>
-                    {if $ip->is_active}{if !$ip->isConfigured()}<span class="ui-icon ui-icon-alert" style="float: left; margin:.5em 0.3em 0 0;"></span>{/if}{/if}
-                    <span {if !$ip->is_active}style="display:none;padding:5px; color : #00BDF2;"{/if} id="spanpluginnamelink{$ip->id}" style=" font-size : 1.4em;">{$ip->name}</span></a>
-                    <span {if $ip->is_active}style="display:none;padding:5px; color : #00BDF2;"{/if} id="spanpluginnametext{$ip->id}" style=" font-size : 1.4em;">{$ip->name}</span><br />
-                    <span style="color:#666">{$ip->description}</span><br>
-                </div>
-                {if $user_is_admin}
-                <div class="grid_4 omega">
-                  <span id="spanpluginactivation{$ip->id}">
-                      <input type="submit" name="submit" class="linkbutton btnToggle" id="{$ip->id}" value="{if $ip->is_active}Deactivate{else}Activate{/if}" />
-                  </span>
-                  <span style="display: none;" class='linkbutton' id="messageactive{$ip->id}"></span>
-                  </div>
-                {/if}
-              </div>
-              {/if}
-            {/foreach}
-          {else}
-            <a href="?m=manage" class="linkbutton">&laquo; Back to plugins</a>
-          {/if}
+        </div> <!-- end #plugins -->
+
+        <div class="section" id="manage_plugin" {if $body}style="display: block"{/if}>
+            <a href="?m=manage" class="btn btn-mini"><i class="icon-chevron-left icon-muted"></i> Back to plugins</a>
+            {if $body}
+              {$body}
+            {/if}
         </div>
-        {if $body}
-          {$body}
+
+        {if $user_is_admin}
+        <div class="section thinkup-canvas clearfix" id="app_settings">
+
+                
+          <span class="pull-right">{insert name="help_link" id='backup'}</span>
+          <h3><i class="icon-download icon-muted"></i> Back Up and Export Data</h3>
+          <p style="padding-left : 20px;">
+            <a href="{$site_root_path}install/backup.php" class="btn"><i class="icon icon-download-alt"></i> Back up ThinkUp's entire database</a>
+            Recommended before upgrading ThinkUp.
+          </p>
+
+          <p style="padding-left : 20px; padding-bottom : 30px;">
+            <a href="{$site_root_path}install/exportuserdata.php" class="btn"><i class="icon icon-user"></i> Export a single user account's data</a>
+                For transfer into another existing ThinkUp database.
+          </p>
+
+
+          <div class="alert" id="app_setting_loading_div">
+            <i class="icon-spinner icon-spin icon-2x"></i> Loading application settings...<br /><br />
+          </div>
+          <div id="app_settings_div" style="display: none;">
+            {include file="account.appconfig.tpl"}
+          </div>
+          <script type="text/javascript"> var site_root_path = '{$site_root_path}';</script>
+          <script type="text/javascript" src="{$site_root_path}assets/js/appconfig.js"></script>
+                
+        </div> <!-- end #app_setting -->
         {/if}
-      </div>
-    </div> <!-- end #plugins -->
 
-    {if $user_is_admin}
-    <div class="section thinkup-canvas clearfix" id="app_settings">
-        <div style="text-align: center" id="app_setting_loading_div">
-            Loading application settings...<br /><br />
-            <img src="{$site_root_path}assets/img/loading.gif" width="50" height="50" />
-        </div>
-        <div id="app_settings_div" style="display: none;">
-         {include file="account.appconfig.tpl"}
-        </div>
-        <script type="text/javascript"> var site_root_path = '{$site_root_path}';</script>
-        <script type="text/javascript" src="{$site_root_path}assets/js/appconfig.js"></script>
-        
-   <div class="prepend_20">
-    {insert name="help_link" id='backup'}
-    <h1>Back Up and Export Data</h1>
-
-    <p><br />
-    
-    <div style="margin: 0px 0px 30px 0px;">
-        <a href="{$site_root_path}install/backup.php" class="linkbutton emphasized">Back up ThinkUp's entire database</a>
-        <p style="padding-left : 20px; margin-top : 14px;">Recommended before upgrading ThinkUp.</p>
-      </div>
-
-    <div style="margin: 0px 0px 30px 0px;">
-        <a href="{$site_root_path}install/exportuserdata.php" class="linkbutton emphasized">Export a single service user's data</a>
-        <p style="padding-left : 20px; margin-top : 14px;">For transfer into another existing ThinkUp database.</p>
-    </div>
-    </p>
-  </div>
-        
-    </div> <!-- end #app_setting -->
-    {/if}
-
-    <div class="sections" id="instances">
-      <div class="thinkup-canvas clearfix">
-        <div class="alpha omega grid_22 prefix_1 clearfix prepend_20 append_20">
-        {include file="_usermessage.tpl" field='password'}
-        {insert name="help_link" id='account'}
-        <h1>Password</h1><br />
-          <form name="changepass" id="changepass" method="post" action="index.php?m=manage#instances" class="prepend_20 append_20">
-            <div class="clearfix">
-              <div class="grid_7 prefix_1 right"><label for="oldpass">Current password:</label></div>
-              <div class="grid_7 left" style="margin: 0px 0px 10px 5px; width:360px;">
-                <input name="oldpass" type="password" id="oldpass" style="width:360px;">
-                {insert name="csrf_token"}<!-- reset password -->
+        <div class="section" id="instances">
+          {include file="_usermessage.tpl" field='password'}
+          <span class="pull-right">{insert name="help_link" id='account'}</span>
+          <h3><i class="icon-key icon-muted"></i> Password</h3>
+          <form name="changepass" id="changepass" class="form-horizontal" method="post" action="index.php?m=manage#instances">
+            <div class="control-group input-prepend">
+              <label for="oldpass" class="control-label">Current password</label>
+              <div class="controls">
+                <span class="add-on"><i class="icon-key"></i></span>
+                <input name="oldpass" type="password" id="oldpass">{insert name="csrf_token"}<!-- reset password -->
               </div>
             </div>
-            <div class="clearfix">
-              <div class="grid_7 prefix_1 right"><label for="pass1">New password:</label></div>
-              <div class="grid_12 left">
-                <input name="pass1" type="password" id="pass1" style="width:360px;"
-                onfocus="$('#password-meter').show();">
-                <div class="password-meter" style="display:none;" id="password-meter">
-                    <div class="password-meter-message"></div>
-                    <div class="password-meter-bg">
-                        <div class="password-meter-bar"></div>
+            <div class="control-group">
+                    <label class="control-label" for="password">New Password</label>
+                    <div class="controls">
+                        <span class="input-prepend">
+                            <span class="add-on"><i class="icon-key"></i></span>
+                            <input type="password" name="pass1" id="password"
+                            {literal}pattern="^(?=.*[0-9]+.*)(?=.*[a-zA-Z]+.*).{8,}$"{/literal} class="password" required 
+                            data-validation-required-message="<i class='icon-exclamation-sign'></i> You'll need a enter a password of at least 8 characters." 
+                            data-validation-pattern-message="<i class='icon-exclamation-sign'></i> Must be at least 8 characters, with both numbers & letters.">
+                        </span>
+                        <span class="help-inline"></span>
+
                     </div>
                 </div>
-                <br>
-              </div>
-              <div class="clearfix append_bottom" style="margin: 40px 0px 0px 0px;">
-                <div class="grid_7 prefix_1 right"><label for="pass2">Re-type new password:</label></div>
-                <div class="grid_7 left" style=" margin: 0px 0px 10px 5px;">
-                  <input name="pass2" type="password" id="pass2" style="width:360px;">
+                <div class="control-group">
+                    <label class="control-label" for="confirm_password">Confirm&nbsp;new Password</label>
+                    <div class="controls">
+                        <span class="input-prepend">
+                            <span class="add-on"><i class="icon-key"></i></span>            
+                            <input type="password" name="pass2" id="confirm_password" required 
+                             class="password" 
+                            data-validation-required-message="<i class='icon-exclamation-sign'></i> Password confirmation is required." 
+                            data-validation-match-match="pass1" 
+                            data-validation-match-message="<i class='icon-exclamation-sign'></i> Make sure this matches the password you entered above." >
+                        </span>
+                        <span class="help-block"></span>
+                    </div>
                 </div>
-              </div>
-              <div class="prefix_8 grid_7 left">
-                <input type="submit" id="login-save" name="changepass" value="Change password" class="linkbutton emphasized">
+            <div class="control-group">
+              <div class="controls">
+                <input type="submit" id="login-save" name="changepass" value="Change password" class="btn btn-primary">
               </div>
             </div>
           </form>
-<br><br>
-{insert name="help_link" id='rss'}
-<h1>Automate ThinkUp Data Capture</h1><br />
+    <br><br>
+    {include file="_usermessage.tpl" field='notifications'}
+    <h3><i class="icon-calendar icon-muted"></i> Notification Frequency</h3><br />
+    <form name="setEmailNotificationFrequency" id="setEmailNotificationFrequency" class="form-horizontal" method="post" action="index.php?m=manage#instances">
+        <div class="control-group">
+           <label class="control-label" for="update_notification_frequency">Get insights via email:</label>
+           <div class="controls">
+             <select name="notificationfrequency">
+             {foreach from=$notification_options item=description key=key}
+                 <option value="{$key}" {if $key eq $owner->email_notification_frequency}selected="selected"{/if}>{$description}</option>
+             {/foreach}
+             </select>
+          </div>
+        </div>
+        <div class="control-group">
+          <div class="controls">
+            {insert name="csrf_token"}
+            <input type="submit" name="updatefrequency" value="Save" class="btn btn-primary">
+          </div>
+         </div>
+    </form>
+    <br><br>
 
-<p>ThinkUp can capture data automatically if you subscribe to this secret RSS feed URL in your favorite newsreader.</p>
 
-<div style="text-align: center; padding: 20px 0px 20px 0px;width:100%;">
-<a href="{$rss_crawl_url}" class="linkbutton emphasized">Secret RSS Feed to Update ThinkUp</a>
-<div style="clear:all">&nbsp;<br><br><br></div>
-</div>
+    {include file="_usermessage.tpl" field='timezone'}
+     <form name="setTimezone" id="setTimezone" class="form-horizontal" method="post" action="index.php?m=manage#instances">
+         <div class="control-group">
+            <label class="control-label" for="update_timezone">Your Time Zone:</label>
+            <div class="controls">
+              <select name="timezone" id="timezone">
+              <option value=""{if $owner->timezone eq 'UTC'} selected{/if}>Select a time zone:</option>
+                {foreach from=$tz_list key=group_name item=group}
+                  <optgroup label='{$group_name}'>
+                    {foreach from=$group item=tz}
+                      <option id="tz-{$tz.display}" value='{$tz.val}'{if $owner->timezone eq $tz.val} selected{/if}>{$tz.display}</option>
+                    {/foreach}
+                  </optgroup>
+                {/foreach}
+              </select>
+              {if $owner->timezone eq 'UTC'}
+              <script type="text/javascript">
+              {literal}
+              var tz_info = jstz.determine();
+              var regionname = tz_info.name().split('/');
+              var tz_option_id = '#tz-' + regionname[1];
+              if( $('#timezone option[value="' + tz_info.name() + '"]').length > 0) {
+                  if( $(tz_option_id) ) {
+                      $('#timezone').val( tz_info.name());
+                  }
+              }
+              {/literal}
+              </script>
+              {/if}
+           </div>
+         </div>
+         <div class="control-group">
+           <div class="controls">
+             {insert name="csrf_token"}
+             <input type="submit" name="updatetimezone" value="Save" class="btn btn-primary">
+           </div>
+          </div>
+     </form>
+     <br><br>
 
-<p>Alternately, use the command below to set up a cron job that runs hourly to update your posts. (Be sure to change yourpassword to your real password!)
-<br /><br />
-<div><small><code style="font-family:Courier;" id="clippy_2988">{$cli_crawl_command}</code></small>
-
+    <span class="pull-right">{insert name="help_link" id='rss'}</span>
+    <h3><i class="icon-refresh icon-muted"></i> Automate ThinkUp Data Capture</h3><br />
+    
+    <legend>RSS</legend>
+    <p>ThinkUp can capture data automatically if you subscribe to this secret RSS feed URL in your favorite newsreader.</p>
+    
+    <p><a href="{$rss_crawl_url}" class="btn"><i class="icon icon-rss"></i> Secret ThinkUp Update Feed</a></p>
+    
+    <legend>Scheduling</legend>
+    <p>Alternately, use the command below to set up a cron job that runs hourly to update your posts. (Be sure to change yourpassword to your real password!)</p>
+    <p>
+      <code style="font-family:Courier;" id="clippy_2988">{$cli_crawl_command}</code>
 
       <object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000"
               width="100"
@@ -169,123 +245,109 @@
              wmode="opaque"
       />
       </object>
+    </p>
+    
 
-
-
-</div>
-<br /><br /><br/>
-</p>
-
-<h1>Your API Key</h1><br />
-{include file="_usermessage.tpl" field='api_key'}
-
-          <div style="padding: 20px 0px 20px 0px;">
-             <strong>Your Current ThinkUp API Key:</strong>
-             <span id="hidden_api_key" style="display: none;">{$owner->api_key}</span>
-             <span id="show_api_key">
-             <a href="javascript:;" onclick="$('#show_api_key').hide(); $('#hidden_api_key').show();" class="linkbutton">
-             Click to view</a>
-             </span>
-          </div> 
-
-<p>Accidentally share your secret RSS URL?</p>
-
-          <form method="post" action="index.php?m=manage#instances" class="prepend_20 append_20" 
-          style="padding: 20px 0px 0px 0px;" id="api-key-form">
-      <div class="grid_10 prefix_9 left">
+        <legend>Your API Key</legend>
+              {include file="_usermessage.tpl" field='api_key'}
+              <strong>Your Current ThinkUp API Key:</strong>
+              <span id="hidden_api_key" style="display: none;">{$owner->api_key}</span>
+              <span id="show_api_key">
+              <a href="javascript:;" onclick="$('#show_api_key').hide(); $('#hidden_api_key').show();" class="linkbutton">
+              Click to view</a>
+              </span>
+    
+              <p>Accidentally share your secret RSS URL?</p>
+    
+              <form method="post" action="index.php?m=manage#instances" id="api-key-form">
                 <input type="hidden" name="reset_api_key" value="Reset API Key" />
                 <span id="apikey_conf" style="display: none;">
                 Don't forget! If you reset your API key, you will need to update your ThinkUp crawler RSS feed subscription. This action cannot be undone.
                 </span>
                 <input type="button" value="Reset Your API Key" 
-                class="linkbutton"
+                class="btn btn-warning"
                 {literal}
                 onclick="if(confirm($('#apikey_conf').html().trim())) { $('#api-key-form').submit();}">
                 {/literal}
-              </div>
-              {insert name="csrf_token"}<!-- reset api_key -->
-          </form>
-        </div>
-      </div>
-    </div> <!-- end #instances -->
-    
+                {insert name="csrf_token"}<!-- reset api_key -->
+              </form>
+        </div> <!-- end #instances -->
+
     {if $user_is_admin}
-      <div class="thinkup-canvas" id="ttusers">
+      <div class="section" id="ttusers">
 
      <div class="thinkup-canvas clearfix">
          <div class="alpha omega grid_20 prefix_1 clearfix prepend_20 append_20">
-        <h1>Invite New User</h1>
+        <h3><i class="icon-user icon-muted"></i> Invite New User</h3>
         {include file="_usermessage.tpl" field='invite'}
           <form name="invite" method="post" action="index.php?m=manage#ttusers" class="prepend_20 append_20">
                 {insert name="csrf_token"}<input type="submit" id="login-save" name="invite" value="Create Invitation" 
-                class="linkbutton emphasized">
+                class="btn btn-primary">
           </form>
         </div>
 
-      <div class="alpha omega grid_22 prefix_1 clearfix prepend_20 append_20">
-      <h1>Registered Users</h1>
+      <h3><i class="icon-group icon-muted"></i> Registered Users</h3>
 
-        <div class="append_20 clearfix">
-        
+    <table class="table">
 {foreach from=$owners key=oid item=o name=oloop}
   {if $smarty.foreach.oloop.first}
-    <div class="clearfix header">
-      <div class="grid_14 alpha">name</div>
-      <div class="grid_3">activate</div>
-      <div class="grid_3 omega">admin</div>
-    </div>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Activate</th>
+          <th>Admin</th>
+        </tr>
+      </thead>
   {/if}
   
-  <div class="clearfix bt append prepend">
-    <div class="grid_14 small alpha">
-        <span{if $o->is_admin} style="background-color:#FFFFCC"{/if}>{$o->full_name|filter_xss}</span><br>
-        <small>{$o->email|filter_xss}</small>
-        <span style="color:#666"><br><small>{if $o->last_login neq '0000-00-00'}logged in {$o->last_login|relative_datetime} ago{/if}</small></span>
-         {if $o->instances neq null}
-         <br><br>Service users:
-         <span style="color:#666"><br><small>
-          {foreach from=$o->instances key=iid item=i}
-              {$i->network_username|filter_xss} | {$i->network|capitalize}
-              {if !$i->is_active} (paused){/if}<br>
-          {/foreach}
-        {else}
-           &nbsp;
-        {/if}
-        </small></span>
-    </div>
-        <div class="grid_4">
+      <tr>
+        <td>
+          <span{if $o->is_admin} style="background-color:#FFFFCC"{/if}>{$o->full_name|filter_xss}</span><br>
+          <small>{$o->email|filter_xss}</small>
+          <span style="color:#666"><br><small>{if $o->last_login neq '0000-00-00'}logged in {$o->last_login|relative_datetime} ago{/if}</small></span>
+           {if $o->instances neq null}
+           <br><br>Service users:
+           <span style="color:#666"><br><small>
+            {foreach from=$o->instances key=iid item=i}
+                {$i->network_username|filter_xss} | {$i->network|capitalize}
+                {if !$i->is_active} (paused){/if}<br>
+            {/foreach}
+          {else}
+             &nbsp;
+          {/if}
+          </small></span>
+        </td>
+        <td>
           {if $o->id neq $owner->id}
           <span id="spanowneractivation{$o->id}">
-          <input type="submit" name="submit" class="linkbutton toggleOwnerActivationButton" id="user{$o->id}" value="{if $o->is_activated}Deactivate{else}Activate{/if}" />
+          <input type="submit" name="submit" class="btn {if $o->is_activated}btn-danger{else}btn-success{/if} toggleOwnerActivationButton" id="user{$o->id}" value="{if $o->is_activated}Deactivate{else}Activate{/if}" />
           </span>
           <span style="display: none;" class="linkbutton" id="messageowneractive{$o->id}"></span>
           {/if}
-      </div>
-        <div class="grid_4 omega">
+        </td>
+        <td>
           {if $o->id neq $owner->id && $o->is_activated}
           <span id="spanowneradmin{$o->id}">
-          <input type="submit" name="submit" class="linkbutton toggleOwnerAdminButton" id="userAdmin{$o->id}" value="{if $o->is_admin}Demote{else}Promote{/if}" />
+          <input type="submit" name="submit" class="btn {if $o->is_admin}btn-danger{else}btn-success{/if} toggleOwnerAdminButton" id="userAdmin{$o->id}" value="{if $o->is_admin}Demote{else}Promote{/if}" />
           </span>
           <span style="display: none;" class="linkbutton" id="messageadmin{$o->id}"></span>
           {/if}
-      </div>
-  </div>
+        </td>
+      </tr>
 {/foreach}
-        </div>
-     </div>
+    </table>
 
-          
-        </div> <!-- end .thinkup-canvas -->
       </div> <!-- end #ttusers -->
+
+        </div>
     {/if} <!-- end is_admin -->
+    </div>
+</div>
 
-
-
-   
-  </div>
 </div>
 
 <script type="text/javascript">
+  var show_plugin = {if $force_plugin}true{else}false{/if};
   {literal}
 $(function() {
     $(".btnPub").click(function() {
@@ -297,9 +359,9 @@ $(function() {
         url: "{/literal}{$site_root_path}{literal}account/toggle-public.php",
         data: dataString,
         success: function() {
-          $('#div' + u).html("<span class='linkbutton' id='message" + u + "'></span>");
-          $('#message' + u).html("Set to public!").hide().fadeIn(1500, function() {
-            $('#message' + u);
+          $('#div' + u).html("<span class='alert alert-success' id='messagepub" + u + "'></span>");
+          $('#messagepub' + u).html("Set to public!").hide().fadeIn(1500, function() {
+            $('#messagepub' + u);
           });
         }
       });
@@ -315,9 +377,9 @@ $(function() {
         url: "{/literal}{$site_root_path}{literal}account/toggle-public.php",
         data: dataString,
         success: function() {
-          $('#div' + u).html("<span class='linkbutton' id='message" + u + "'></span>");
-          $('#message' + u).html("Set to private!").hide().fadeIn(1500, function() {
-            $('#message' + u);
+          $('#div' + u).html("<span class='alert alert-success' id='messagepriv" + u + "'></span>");
+          $('#messagepriv' + u).html("Set to private!").hide().fadeIn(1500, function() {
+            $('#messagepriv' + u);
           });
         }
       });
@@ -335,9 +397,9 @@ $(function() {
         url: "{/literal}{$site_root_path}{literal}account/toggle-active.php",
         data: dataString,
         success: function() {
-          $('#divactivate' + u).html("<span class='linkbutton' id='message" + u + "'></span>");
-          $('#message' + u).html("Started!").hide().fadeIn(1500, function() {
-            $('#message' + u);
+          $('#divactivate' + u).html("<span class='alert alert-success' id='messageplay" + u + "'></span>");
+          $('#messageplay' + u).html("Started!").hide().fadeIn(1500, function() {
+            $('#messageplay' + u);
           });
         }
       });
@@ -353,9 +415,9 @@ $(function() {
         url: "{/literal}{$site_root_path}{literal}account/toggle-active.php",
         data: dataString,
         success: function() {
-          $('#divactivate' + u).html("<span class='linkbutton' id='message" + u + "'></span>");
-          $('#message' + u).html("Paused!").hide().fadeIn(1500, function() {
-            $('#message' + u);
+          $('#divactivate' + u).html("<span class='alert alert-success' id='messagepause" + u + "'></span>");
+          $('#messagepause' + u).html("Paused!").hide().fadeIn(1500, function() {
+            $('#messagepause' + u);
           });
         }
       });
@@ -363,70 +425,7 @@ $(function() {
     });
   });
 
-  $(function() {
-    var activate = function(u) {
-      var dataString = 'pid=' + u + "&a=1&csrf_token=" + window.csrf_token; // toggle plugin on
-      $.ajax({
-        type: "GET",
-        url: "{/literal}{$site_root_path}{literal}account/toggle-pluginactive.php",
-        data: dataString,
-        success: function() {
-          $('#spanpluginactivation' + u).css('display', 'none');
-          $('#messageactive' + u).html("Activated!").hide().fadeIn(1500, function() {
-            $('#messageactive' + u);
-          });
-          $('#spanpluginnamelink' + u).css('display', 'inline');
-          $('#' + u).val('Deactivate');
-          $('#spanpluginnametext' + u).css('display', 'none');
-          $('#' + u).removeClass('btnActivate');
-          $('#' + u).addClass('btnDectivate');
-          setTimeout(function() {
-              $('#messageactive' + u).css('display', 'none');
-              $('#spanpluginactivation' + u).hide().fadeIn(1500);
-            },
-            2000
-          );
-        }
-      });
-      return false;
-    };
 
-    var deactivate = function(u) {
-      var dataString = 'pid=' + u + "&a=0&csrf_token=" + window.csrf_token; // toggle plugin off
-      $.ajax({
-        type: "GET",
-        url: "{/literal}{$site_root_path}{literal}account/toggle-pluginactive.php",
-        data: dataString,
-        success: function() {
-          $('#spanpluginactivation' + u).css('display', 'none');
-          $('#messageactive' + u).html("Deactivated!").hide().fadeIn(1500, function() {
-            $('#messageactive' + u);
-          });
-          $('#spanpluginnamelink' + u).css('display', 'none');
-          $('#spanpluginnametext' + u).css('display', 'inline');
-          $('#' + u).val('Activate');
-          $('#' + u).removeClass('btnDeactivate');
-          $('#' + u).addClass('btnActivate');
-          setTimeout(function() {
-              $('#messageactive' + u).css('display', 'none');
-              $('#spanpluginactivation' + u).hide().fadeIn(1500);
-            },
-            2000
-          );
-        }
-      });
-      return false;
-    };
-
-    $(".btnToggle").click(function() {
-      if($(this).val() == 'Activate') {
-        activate($(this).attr("id"));
-      } else {
-        deactivate($(this).attr("id"));
-      }
-    });
-  });
-  
     $(function() {
     var activateOwner = function(u) {
       //removing the "user" from id here to stop conflict with plugin    
@@ -444,8 +443,7 @@ $(function() {
           $('#spanownernamelink' + u).css('display', 'inline');
           $('#user' + u).val('Deactivate');
           $('#spanownernametext' + u).css('display', 'none');
-          $('#user' + u).removeClass('btnActivate');
-          $('#user' + u).addClass('btnDectivate');
+          $('#user' + u).removeClass('btn-success').addClass('btn-danger');
           $('#userAdmin' + u).show();
           setTimeout(function() {
               $('#messageowneractive' + u).css('display', 'none');
@@ -474,8 +472,7 @@ $(function() {
           $('#spanownernamelink' + u).css('display', 'none');
           $('#spanownernametext' + u).css('display', 'inline');
           $('#user' + u).val('Activate');
-          $('#user' + u).removeClass('btnDeactivate');
-          $('#user' + u).addClass('btnActivate');
+          $('#user' + u).removeClass('btn-danger').addClass('btn-success');
           $('#userAdmin' + u).hide();
           setTimeout(function() {
               $('#messageowneractive' + u).css('display', 'none');
@@ -504,8 +501,7 @@ $(function() {
           $('#spanownernamelink' + u).css('display', 'inline');
           $('#userAdmin' + u).val('Demote');
           $('#spanownernametext' + u).css('display', 'none');
-          $('#userAdmin' + u).removeClass('btnActivate');
-          $('#userAdmin' + u).addClass('btnDectivate');
+          $('#userAdmin' + u).removeClass('btn-success').addClass('btn-danger');
           setTimeout(function() {
               $('#messageadmin' + u).css('display', 'none');
               $('#spanowneradmin' + u).hide().fadeIn(1500);
@@ -533,8 +529,7 @@ $(function() {
           $('#spanownernamelink' + u).css('display', 'none');
           $('#spanownernametext' + u).css('display', 'inline');
           $('#userAdmin' + u).val('Promote');
-          $('#userAdmin' + u).removeClass('btnDeactivate');
-          $('#userAdmin' + u).addClass('btnActivate');
+          $('#userAdmin' + u).removeClass('btn-danger').addClass('btn-success');
           setTimeout(function() {
               $('#messageadmin' + u).css('display', 'none');
               $('#spanowneradmin' + u).hide().fadeIn(1500);
@@ -562,10 +557,24 @@ $(function() {
       }
     });
 
+    $('.manage_plugin').click(function (e) {
+      var url = $(this).attr('href');
+      var p = url.replace(/.*p=/, '').replace(/#.*/, '');;
+      if (window.location.href.indexOf("="+p) >= 0) {
+        $('.section').hide();
+        $('#manage_plugin').show();
+        e.preventDefault();
+      }
+    });
+    if ((show_plugin && (!window.location.hash || window.location.hash == '' || window.location.hash == '#_=_' ))
+    || (window.location.hash && window.location.hash == '#manage_plugin')) {
+      $('.section').hide();
+      $('#manage_plugin').show();
+    }
 
   });
 
   {/literal}
 </script>
 
-{include file="_footer.tpl" linkify="false"}
+{include file="_footer.tpl" linkify=0 enable_bootstrap=1}

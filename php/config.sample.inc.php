@@ -22,6 +22,9 @@ $THINKUP_CFG['timezone']                  = 'UTC';
 
 // Toggle Smarty caching. true: Smarty caching on, false: Smarty caching off
 $THINKUP_CFG['cache_pages']               = true;
+//
+// Should sessions be stored in the database?  (As opposed to the php default files)
+$THINKUP_CFG['use_db_sessions']               = true;
 
 // Smarty file cache lifetime in seconds; defaults to 600 (10 minutes) caching
 $THINKUP_CFG['cache_lifetime']               = 600;
@@ -29,6 +32,10 @@ $THINKUP_CFG['cache_lifetime']               = 600;
 // The crawler, when triggered by requests to the RSS feed, will only launch if it's been
 // 20 minutes or more since the last crawl.
 $THINKUP_CFG['rss_crawler_refresh_rate']  = 20;
+
+// Optional Mandrill API key. Set this to a valid key to send email via Mandrill instead of PHP's mail() function..
+// Get key at https://mandrillapp.com/settings/ in "SMTP & API Credentials"
+$THINKUP_CFG['mandrill_api_key'] = '';
 
 /************************************************/
 /***  DATABASE CONFIG                         ***/
@@ -48,18 +55,18 @@ $THINKUP_CFG['table_prefix']              = 'tu_';
 /************************************************/
 
 // Full server path to crawler.log.
-// $THINKUP_CFG['log_location']              = $THINKUP_CFG['datadir_path'] . '/logs/crawler.log';
+// $THINKUP_CFG['log_location']              = $THINKUP_CFG['datadir_path'] . 'logs/crawler.log';
 $THINKUP_CFG['log_location']              = false;
 
 // Verbosity of log. 0 is everything, 1 is user messages, 2 is errors only
 $THINKUP_CFG['log_verbosity']             = 0;
 
 // Full server path to stream processor log.
-// $THINKUP_CFG['stream_log_location']       = $THINKUP_CFG['datadir_path'] . '/logs/stream.log';
+// $THINKUP_CFG['stream_log_location']       = $THINKUP_CFG['datadir_path'] . 'logs/stream.log';
 $THINKUP_CFG['stream_log_location']       = false;
 
 // Full server path to sql.log. To not log queries, set to null.
-// $THINKUP_CFG['sql_log_location']          = $THINKUP_CFG['datadir_path'] . '/logs/sql.log';
+// $THINKUP_CFG['sql_log_location']          = $THINKUP_CFG['datadir_path'] . 'logs/sql.log';
 $THINKUP_CFG['sql_log_location']          = null;
 
 // How many seconds does a query take before it gets logged as a slow query?
@@ -74,7 +81,7 @@ $THINKUP_CFG['enable_profiler']           = false;
 $THINKUP_CFG['set_pdo_charset']           = false;
 
 //TESTS OVERRIDE: Assign variables below to use different settings during test builds
-if ((isset($_SESSION["MODE"]) && $_SESSION["MODE"] == "TESTS") && ! isset($_SESSION["RD_MODE"])
+if ((isset($_COOKIE['TU_MODE']) && $_COOKIE['TU_MODE']=='TESTS') && ! isset($_SESSION["RD_MODE"])
 || (getenv("MODE")=="TESTS" && ! getenv("RD_MODE")=="1")) {
     //    $THINKUP_CFG['source_root_path']          = '/your-server-path-to/thinkup/';
     //    $THINKUP_CFG['db_user']                   = 'your_test_database_username';
@@ -82,6 +89,7 @@ if ((isset($_SESSION["MODE"]) && $_SESSION["MODE"] == "TESTS") && ! isset($_SESS
     //    $THINKUP_CFG['db_name']                   = 'your_test_database_name'; //by default, thinkup_tests
     $THINKUP_CFG['cache_pages']               = false;
     $THINKUP_CFG['debug']                     = true;
+    $THINKUP_CFG['timezone']                  = 'UTC';
     ini_set('error_reporting', E_STRICT);
 }
 

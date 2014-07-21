@@ -3,11 +3,11 @@
  *
  * ThinkUp/webapp/_lib/controller/class.LoginController.php
  *
- * Copyright (c) 2009-2012 Gina Trapani
+ * Copyright (c) 2009-2013 Gina Trapani
  *
  * LICENSE:
  *
- * This file is part of ThinkUp (http://thinkupapp.com).
+ * This file is part of ThinkUp (http://thinkup.com).
  *
  * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
@@ -25,20 +25,27 @@
  *
  * @TODO Build mechanism for redirecting user to originally-requested logged-in only page.
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2012 Gina Trapani
+ * @copyright 2009-2013 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
  */
 class LoginController extends ThinkUpController {
 
     public function control() {
+        $this->redirectToThinkUpLLCEndpoint();
         $this->setPageTitle('Log in');
         $this->setViewTemplate('session.login.tpl');
         $this->view_mgr->addHelp('login', 'userguide/accounts/index');
         $this->disableCaching();
+
+        // set var for open registration
+        $config = Config::getInstance();
+        $is_registration_open = $config->getValue('is_registration_open');
+        $this->addToView('is_registration_open', $is_registration_open);
+
         //don't show login form if already logged in
         if ($this->isLoggedIn()) {
-            $controller = new DashboardController(true);
+            $controller = new InsightStreamController(true);
             return $controller->go();
         } else  {
             $owner_dao = DAOFactory::getDAO('OwnerDAO');
@@ -68,7 +75,7 @@ class LoginController extends ThinkUpController {
                         $error_msg = 'Inactive account. ';
                         if ($owner->failed_logins == 0) {
                             $error_msg .=
-                            '<a href="http://thinkupapp.com/docs/install/install.html#activate-your-account">' .
+                            '<a href="http://thinkup.com/docs/install/install.html#activate-your-account">' .
                             'You must activate your account.</a>';
                         } elseif ($owner->failed_logins == 10) {
                             $error_msg .= $owner->account_status .
@@ -98,7 +105,7 @@ class LoginController extends ThinkUpController {
                         $owner_dao->resetFailedLogins($user_email);
                         $owner_dao->clearAccountStatus($user_email);
                         if (!$this->redirect()) {
-                            $controller = new DashboardController(true);
+                            $controller = new InsightStreamController(true);
                             return $controller->go();
                         }
                     }

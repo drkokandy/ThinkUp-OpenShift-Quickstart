@@ -2,11 +2,11 @@
 /**
  * ThinkUp/webapp/_lib/controller/class.StreamerAuthController.php
  *
- * Copyright (c) 2011-2012 Amy Unruh
+ * Copyright (c) 2011-2013 Amy Unruh
  *
  * LICENSE:
  *
- * This file is part of ThinkUp (http://thinkupapp.com).
+ * This file is part of ThinkUp (http://thinkup.com).
  *
  * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
@@ -24,7 +24,7 @@
  *
  * Runs crawler from the command line given valid command line credentials.
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2011-2012 Amy Unruh
+ * @copyright 2011-2013 Amy Unruh
  * @author Amy Unruh
  */
 class StreamerAuthController extends ThinkUpController {
