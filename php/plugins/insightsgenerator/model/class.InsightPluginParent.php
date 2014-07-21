@@ -79,8 +79,9 @@ class InsightPluginParent {
         }
 
         // Check whether testing
-        if (Utils::isTest()) {
-            return ($run && Utils::isTest());
+        $in_test_mode = ((isset($_SESSION["MODE"]) && $_SESSION["MODE"] == "TESTS") || getenv("MODE") == "TESTS");
+        if ($in_test_mode) {
+            return ($run && $in_test_mode);
         }
 
         // Check the day of the week (0 for Sunday through 6 for Saturday) on which the insight should run

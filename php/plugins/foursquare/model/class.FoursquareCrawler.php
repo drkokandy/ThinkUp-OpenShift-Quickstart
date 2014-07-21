@@ -166,8 +166,7 @@ class FoursquareCrawler {
             'client_secret'=>urlencode($client_secret),
             'grant_type'=>urlencode('authorization_code'),
             'redirect_uri'=>urldecode($redirect_uri),
-            'code'=>urlencode($code),
-            'v'=>'20120829'
+            'code'=>urlencode($code)
         );
         $tokens =  $this->api_accessor->rawPostApiRequest($access_token_request_url, $fields, true);
         return $tokens;

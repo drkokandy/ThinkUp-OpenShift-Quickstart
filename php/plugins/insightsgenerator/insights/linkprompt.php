@@ -94,7 +94,8 @@ class LinkPromptInsight extends InsightPluginParent implements InsightPlugin {
     public function shouldGenerateInsight($slug, Instance $instance, $insight_date=null,
     $regenerate_existing_insight=false, $day_of_week=null, $count_last_week_of_posts=null,
     $excluded_networks=null, $alternate_day=true) {
-        if (Utils::isTest()) {
+        $in_test_mode = ((isset($_SESSION["MODE"]) && $_SESSION["MODE"] == "TESTS") || getenv("MODE") == "TESTS");
+        if ($in_test_mode) {
             return true;
         } else {
             return $alternate_day && parent::shouldGenerateInsight($slug, $instance, $insight_date,
