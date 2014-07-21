@@ -204,12 +204,29 @@ class FacebookPluginConfigurationController extends PluginConfigurationControlle
                 $access_token_response = FacebookGraphAPIAccessor::rawApiRequest($api_req, false);
                 parse_str($access_token_response);
                 if (isset($access_token)) {
+                    /**
+                     * Swap in short-term token for long-lived token as per
+                     * https://developers.facebook.com/docs/facebook-login/access-tokens/#extending
+                     */
+                    $api_req = 'https://graph.facebook.com/oauth/access_token?grant_type=fb_exchange_token&client_id='.
+                    $options['facebook_app_id']->option_value.'&client_secret='.
+                    $options['facebook_api_secret']->option_value. '&fb_exchange_token='.$access_token;
+
+                    $access_token_response = FacebookGraphAPIAccessor::rawApiRequest($api_req, false);
+                    parse_str($access_token_response);
+
                     $facebook->setAccessToken($access_token);
                     $fb_user_profile = $facebook->api('/me');
                     $fb_username = $fb_user_profile['name'];
                     $fb_user_id = $fb_user_profile['id'];
-                    $this->addSuccessMessage($this->saveAccessToken($fb_user_id, $access_token, $fb_username),
-                    'authorization');
+
+                    if (empty($fb_username)) {
+                        $error = 'Sorry, ThinkUp does not support business accounts.';
+                        $this->addErrorMessage($error, 'authorization');
+                    } else {
+                        $this->addSuccessMessage($this->saveAccessToken($fb_user_id, $access_token, $fb_username),
+                            'authorization');
+                    }
                 } else {
                     $error_msg = "Problem authorizing your Facebook account! Please correct your plugin settings.";
                     $error_object = json_decode($access_token_response);
@@ -267,7 +284,7 @@ class FacebookPluginConfigurationController extends PluginConfigurationControlle
                 "different account, log  out of Facebook in a different browser tab and try again.", 'user_add');
             }
             //set auth error to empty string
-            $owner_instance_dao->setAuthError($this->owner->id, $instance->id);
+            $owner_instance_dao->setAuthErrorByTokens($instance->id, $fb_access_token, '');
         } else { //Instance does not exist
             $instance_dao->insert($fb_user_id, $fb_username, 'facebook');
             $instance = $instance_dao->getByUserIdOnNetwork($fb_user_id, 'facebook');
